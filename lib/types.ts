@@ -62,6 +62,7 @@ export interface Task {
   dueDate?: string
   priority?: "low" | "medium" | "high"
   tag?: string
+  cost?: number
 }
 
 export interface Company {
@@ -130,6 +131,18 @@ export interface PrintSettings {
   showCompanyAddress: boolean
   showTax: boolean
   footerMessage: string
+}
+
+export interface Expense {
+  id: string
+  date: string
+  category: string
+  description: string
+  amount: number
+  paymentMethod: "cash" | "momo" | "bank_transfer" | "card"
+  projectId?: string
+  receiptRef?: string
+  createdAt: string
 }
 
 export interface InvoiceItem {

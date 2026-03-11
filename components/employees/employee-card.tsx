@@ -1,7 +1,7 @@
 "use client"
 
 import type { Employee } from "@/lib/types"
-import { Edit2, Archive, Phone, Mail, CreditCard } from "lucide-react"
+import { Edit2, Archive, Phone, Mail, CreditCard, TriangleAlert } from "lucide-react"
 
 interface EmployeeCardProps {
     employee: Employee
@@ -66,12 +66,10 @@ export function EmployeeCard({ employee, onEdit, onToggleStatus }: EmployeeCardP
                     {/^GHA-\d{9}-\d$/.test(employee.ghanaCardId) ? (
                         <span>{employee.ghanaCardId}</span>
                     ) : (
-                        <div className="flex flex-col">
-                            <span className="text-destructive font-medium flex items-center gap-1">
-                                {employee.ghanaCardId}
-                            </span>
-                            <span className="text-[10px] text-destructive">Invalid Format (req: GHA-XXXXXXXXX-X)</span>
-                        </div>
+                        <span className="text-destructive font-medium flex items-center gap-1">
+                            <TriangleAlert size={13} className="shrink-0" />
+                            Add Ghana Card
+                        </span>
                     )}
                 </div>
                 <div className="flex items-center gap-2">

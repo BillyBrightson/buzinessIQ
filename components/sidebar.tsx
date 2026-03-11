@@ -66,9 +66,11 @@ export function Sidebar({ currentPage, onSearchOpen }: SidebarProps) {
       label: "Accounting",
       icon: Calculator,
       subItems: [
-        { href: "/accounting/chart-of-accounts", label: "Chart of Accounts" },
-        { href: "/accounting/journal-entries", label: "Journal Entries" },
-        { href: "/accounting/reports", label: "Financial Reports" },
+        { href: "/accounting/expenses", label: "Expenses" },
+        { href: "/accounting/income", label: "Income" },
+        { href: "/accounting/profit-loss", label: "Profit & Loss" },
+        { href: "/accounting/cash-flow", label: "Cash Flow" },
+        { href: "/accounting/tax", label: "Tax Summary" },
       ]
     },
     { href: "/reports", label: "Reports", icon: FileText },

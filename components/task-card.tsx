@@ -68,11 +68,18 @@ export function TaskCard({ task, employees, onAssigneeClick, onStatusChange }: T
           )}
         </div>
 
-        {task.dueDate && (
-          <span className="text-xs text-muted-foreground">
-            {new Date(task.dueDate).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
-          </span>
-        )}
+        <div className="flex items-center gap-2">
+          {task.dueDate && (
+            <span className="text-xs text-muted-foreground">
+              {new Date(task.dueDate).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
+            </span>
+          )}
+          {task.cost != null && (
+            <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300">
+              GHS {task.cost.toLocaleString()}
+            </span>
+          )}
+        </div>
       </div>
     </div>
   )

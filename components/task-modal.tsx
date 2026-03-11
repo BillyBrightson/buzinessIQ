@@ -159,6 +159,25 @@ export function TaskModal({ task, employees, onClose, onUpdate, onDelete }: Task
               </p>
             )}
           </div>
+
+          <div>
+            <p className="text-sm text-muted-foreground mb-1">Task Cost (GHS)</p>
+            {isEditing ? (
+              <input
+                type="number"
+                min="0"
+                step="0.01"
+                value={editedTask.cost ?? ""}
+                onChange={(e) => setEditedTask({ ...editedTask, cost: e.target.value === "" ? undefined : parseFloat(e.target.value) })}
+                className="w-full px-3 py-2 border border-input rounded-lg bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+                placeholder="0.00"
+              />
+            ) : (
+              <p className="text-lg font-medium text-foreground">
+                {task.cost != null ? `GHS ${task.cost.toFixed(2)}` : "Not set"}
+              </p>
+            )}
+          </div>
         </div>
 
         <div className="mb-6">

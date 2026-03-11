@@ -1,4 +1,4 @@
-import type { Employee, AttendanceRecord, PayrollRecord, Project, Task, Company, Invoice, Payment, ChartOfAccount, JournalEntry, AccountTransaction, BudgetItem, Product, Sale, TeamMember, PrintSettings } from "./types"
+import type { Employee, AttendanceRecord, PayrollRecord, Project, Task, Company, Invoice, Payment, ChartOfAccount, JournalEntry, AccountTransaction, BudgetItem, Product, Sale, TeamMember, PrintSettings, Expense } from "./types"
 
 
 const getKeys = (userId?: string) => ({
@@ -17,6 +17,7 @@ const getKeys = (userId?: string) => ({
   products: userId ? `crm_${userId}_products` : "crm_products",
   sales: userId ? `crm_${userId}_sales` : "crm_sales",
   teamMembers: userId ? `crm_${userId}_teamMembers` : "crm_teamMembers",
+  expenses: userId ? `crm_${userId}_expenses` : "crm_expenses",
 })
 
 // Initialize with sample data only if no userId is provided (Demo Mode)
@@ -646,6 +647,39 @@ export const storage = {
         const keys = getKeys(userId)
         localStorage.setItem(keys.teamMembers, JSON.stringify(all))
       }
+    },
+  },
+  expenses: {
+    getAll: (userId?: string): Expense[] => {
+      const keys = getKeys(userId)
+      return JSON.parse(localStorage.getItem(keys.expenses) || "[]")
+    },
+    getByDateRange: (start: string, end: string, userId?: string): Expense[] => {
+      return storage.expenses.getAll(userId).filter((e) => e.date >= start && e.date <= end)
+    },
+    getByCategory: (category: string, userId?: string): Expense[] => {
+      return storage.expenses.getAll(userId).filter((e) => e.category === category)
+    },
+    add: (expense: Expense, userId?: string) => {
+      const all = storage.expenses.getAll(userId)
+      all.push(expense)
+      const keys = getKeys(userId)
+      localStorage.setItem(keys.expenses, JSON.stringify(all))
+    },
+    update: (id: string, updates: Partial<Expense>, userId?: string) => {
+      const all = storage.expenses.getAll(userId)
+      const index = all.findIndex((e) => e.id === id)
+      if (index >= 0) {
+        all[index] = { ...all[index], ...updates }
+        const keys = getKeys(userId)
+        localStorage.setItem(keys.expenses, JSON.stringify(all))
+      }
+    },
+    delete: (id: string, userId?: string) => {
+      const all = storage.expenses.getAll(userId)
+      const filtered = all.filter((e) => e.id !== id)
+      const keys = getKeys(userId)
+      localStorage.setItem(keys.expenses, JSON.stringify(filtered))
     },
   },
   printSettings: {
