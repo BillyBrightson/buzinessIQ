@@ -137,7 +137,7 @@ export default function InvoicesPage({ onSearchOpen }: { onSearchOpen?: () => vo
 
     const handleSendToClient = (invoice: Invoice) => {
         // Simulate sending email
-        const subject = encodeURIComponent(`Invoice ${invoice.invoiceNumber} from BuildTrack`)
+        const subject = encodeURIComponent(`Invoice ${invoice.invoiceNumber} from BuzinessIQ`)
         const body = encodeURIComponent(`Dear ${invoice.clientName},\n\nPlease find attached the invoice ${invoice.invoiceNumber} for GHS ${invoice.total}.\n\nThank you for your business.`)
         window.location.href = `mailto:?subject=${subject}&body=${body}`
 

@@ -24,11 +24,11 @@ export function ReportView({ type, employee, attendanceData, payrollData, dateRa
             {/* Header */}
             <div className="border-b-2 border-black pb-6 mb-8 flex justify-between items-start">
                 <div>
-                    <h1 className="text-3xl font-bold uppercase tracking-wider mb-2">BuildTrack</h1>
+                    <h1 className="text-3xl font-bold uppercase tracking-wider mb-2">BuzinessIQ</h1>
                     <div className="text-sm space-y-1 text-gray-600">
                         <p className="flex items-center gap-2"><MapPin size={14} /> Accra, Ghana</p>
                         <p className="flex items-center gap-2"><Phone size={14} /> +233 24 123 4567</p>
-                        <p className="flex items-center gap-2"><Mail size={14} /> admin@buildtrack.com</p>
+                        <p className="flex items-center gap-2"><Mail size={14} /> admin@buzinessiq.com</p>
                     </div>
                 </div>
                 <div className="text-right">

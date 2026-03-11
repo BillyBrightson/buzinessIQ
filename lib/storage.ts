@@ -1,4 +1,4 @@
-import type { Employee, AttendanceRecord, PayrollRecord, Project, Task, Company, Invoice, Payment, ChartOfAccount, JournalEntry, AccountTransaction, BudgetItem } from "./types"
+import type { Employee, AttendanceRecord, PayrollRecord, Project, Task, Company, Invoice, Payment, ChartOfAccount, JournalEntry, AccountTransaction, BudgetItem, Product, Sale, TeamMember, PrintSettings } from "./types"
 
 
 const getKeys = (userId?: string) => ({
@@ -14,6 +14,9 @@ const getKeys = (userId?: string) => ({
   journalEntries: userId ? `crm_${userId}_journalEntries` : "crm_journalEntries",
   accountTransactions: userId ? `crm_${userId}_accountTransactions` : "crm_accountTransactions",
   budgets: userId ? `crm_${userId}_budgets` : "crm_budgets",
+  products: userId ? `crm_${userId}_products` : "crm_products",
+  sales: userId ? `crm_${userId}_sales` : "crm_sales",
+  teamMembers: userId ? `crm_${userId}_teamMembers` : "crm_teamMembers",
 })
 
 // Initialize with sample data only if no userId is provided (Demo Mode)
@@ -162,7 +165,7 @@ function initializeSampleData(userId?: string) {
         amount: 10000,
         date: "2024-12-05",
         method: "bank_transfer",
-        status: "completed",
+        status: "full-payment",
         reference: "TRX-88392",
         invoiceId: "1",
         notes: "Partial payment for Phase 1"
@@ -561,6 +564,98 @@ export const storage = {
         const keys = getKeys(userId)
         localStorage.setItem(keys.budgets, JSON.stringify(all))
       }
+    },
+  },
+  products: {
+    getAll: (userId?: string): Product[] => {
+      const keys = getKeys(userId)
+      return JSON.parse(localStorage.getItem(keys.products) || "[]")
+    },
+    getActive: (userId?: string): Product[] => {
+      return storage.products.getAll(userId).filter((p) => p.isActive)
+    },
+    add: (product: Product, userId?: string) => {
+      const all = storage.products.getAll(userId)
+      all.push(product)
+      const keys = getKeys(userId)
+      localStorage.setItem(keys.products, JSON.stringify(all))
+    },
+    update: (id: string, updates: Partial<Product>, userId?: string) => {
+      const all = storage.products.getAll(userId)
+      const index = all.findIndex((p) => p.id === id)
+      if (index >= 0) {
+        all[index] = { ...all[index], ...updates }
+        const keys = getKeys(userId)
+        localStorage.setItem(keys.products, JSON.stringify(all))
+      }
+    },
+    delete: (id: string, userId?: string) => {
+      const all = storage.products.getAll(userId)
+      const index = all.findIndex((p) => p.id === id)
+      if (index >= 0) {
+        all[index].isActive = false
+        const keys = getKeys(userId)
+        localStorage.setItem(keys.products, JSON.stringify(all))
+      }
+    },
+    adjustStock: (id: string, delta: number, userId?: string) => {
+      const all = storage.products.getAll(userId)
+      const index = all.findIndex((p) => p.id === id)
+      if (index >= 0) {
+        all[index].stock = Math.max(0, all[index].stock + delta)
+        const keys = getKeys(userId)
+        localStorage.setItem(keys.products, JSON.stringify(all))
+      }
+    },
+  },
+  sales: {
+    getAll: (userId?: string): Sale[] => {
+      const keys = getKeys(userId)
+      return JSON.parse(localStorage.getItem(keys.sales) || "[]")
+    },
+    getByDate: (date: string, userId?: string): Sale[] => {
+      return storage.sales.getAll(userId).filter((s) => s.date === date)
+    },
+    add: (sale: Sale, userId?: string) => {
+      const all = storage.sales.getAll(userId)
+      all.push(sale)
+      const keys = getKeys(userId)
+      localStorage.setItem(keys.sales, JSON.stringify(all))
+      // Deduct stock for each item sold
+      sale.items.forEach((item) => {
+        storage.products.adjustStock(item.productId, -item.quantity, userId)
+      })
+    },
+  },
+  teamMembers: {
+    getAll: (userId?: string): TeamMember[] => {
+      const keys = getKeys(userId)
+      return JSON.parse(localStorage.getItem(keys.teamMembers) || "[]")
+    },
+    add: (member: TeamMember, userId?: string) => {
+      const all = storage.teamMembers.getAll(userId)
+      all.push(member)
+      const keys = getKeys(userId)
+      localStorage.setItem(keys.teamMembers, JSON.stringify(all))
+    },
+    update: (id: string, updates: Partial<TeamMember>, userId?: string) => {
+      const all = storage.teamMembers.getAll(userId)
+      const index = all.findIndex((m) => m.id === id)
+      if (index >= 0) {
+        all[index] = { ...all[index], ...updates }
+        const keys = getKeys(userId)
+        localStorage.setItem(keys.teamMembers, JSON.stringify(all))
+      }
+    },
+  },
+  printSettings: {
+    get: (): PrintSettings => {
+      if (typeof window === "undefined") return { showCompanyName: true, showCompanyAddress: true, showTax: false, footerMessage: "Thank you for your business!" }
+      const data = localStorage.getItem("crm_printSettings")
+      return data ? JSON.parse(data) : { showCompanyName: true, showCompanyAddress: true, showTax: false, footerMessage: "Thank you for your business!" }
+    },
+    set: (settings: PrintSettings) => {
+      localStorage.setItem("crm_printSettings", JSON.stringify(settings))
     },
   },
 }

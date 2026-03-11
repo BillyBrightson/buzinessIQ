@@ -2,7 +2,7 @@
 
 import Link from "next/link"
 import { useState, useEffect } from "react"
-import { Users, Calendar, DollarSign, LayoutGrid, Home, Menu, X, FileText, CreditCard, ChevronDown, ChevronRight, Calculator, Sparkles } from "lucide-react"
+import { Users, Calendar, DollarSign, LayoutGrid, Home, Menu, X, FileText, CreditCard, ChevronDown, ChevronRight, Calculator, Sparkles, ShoppingCart, Package, BarChart2 } from "lucide-react"
 import { ThemeToggle } from "@/components/theme-toggle"
 import { useAuth } from "@/components/auth-provider"
 import { storage } from "@/lib/storage"
@@ -16,7 +16,7 @@ interface SidebarProps {
 export function Sidebar({ currentPage, onSearchOpen }: SidebarProps) {
   const [isOpen, setIsOpen] = useState(false)
   const { user } = useAuth()
-  const [companyName, setCompanyName] = useState("BuildTrack")
+  const [companyName, setCompanyName] = useState("BuzinessIQ")
   const [expandedMenus, setExpandedMenus] = useState<string[]>([])
 
   useEffect(() => {
@@ -72,6 +72,16 @@ export function Sidebar({ currentPage, onSearchOpen }: SidebarProps) {
       ]
     },
     { href: "/reports", label: "Reports", icon: FileText },
+    {
+      href: "/pos",
+      label: "Point of Sale",
+      icon: ShoppingCart,
+      subItems: [
+        { href: "/pos", label: "POS Terminal" },
+        { href: "/pos/products", label: "Products" },
+        { href: "/pos/sales", label: "Sales History" },
+      ]
+    },
   ]
 
   return (
@@ -89,7 +99,7 @@ export function Sidebar({ currentPage, onSearchOpen }: SidebarProps) {
       >
         <div className="p-6">
           <h1 className="text-2xl font-bold text-sidebar-foreground">{companyName}</h1>
-          <p className="text-sm text-sidebar-foreground/60 mt-1">Construction CRM</p>
+          <p className="text-sm text-sidebar-foreground/60 mt-1">Business Management</p>
         </div>
 
         <nav className="space-y-1 px-4 mt-8">

@@ -121,7 +121,7 @@ export default function ProductsPage({ onSearchOpen }: { onSearchOpen?: () => vo
       stock: parseInt(form.stock) || 0,
       lowStockThreshold: parseInt(form.lowStockThreshold) || 5,
       unit: form.unit,
-      barcode: form.barcode.trim() || undefined,
+      barcode: form.barcode.trim(),
       isActive: true,
       createdAt: editingProduct?.createdAt || new Date().toISOString(),
     }

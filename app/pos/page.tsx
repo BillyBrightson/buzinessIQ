@@ -127,6 +127,7 @@ export default function POSPage({ onSearchOpen }: { onSearchOpen?: () => void })
     if (!user || cart.length === 0) return
     if (paymentMethod === "cash" && tendered < total) return
 
+    const now = new Date().toISOString()
     const sale: Sale = {
       id: crypto.randomUUID(),
       receiptNumber: `RCP-${Date.now().toString().slice(-6)}`,
@@ -134,12 +135,15 @@ export default function POSPage({ onSearchOpen }: { onSearchOpen?: () => void })
       subtotal,
       taxRate: TAX_RATE,
       taxAmount,
+      tax: taxAmount,
       discount: discountAmt,
       total,
-      paymentMethod,
+      amountPaid: paymentMethod === "cash" ? tendered : total,
       amountTendered: paymentMethod === "cash" ? tendered : total,
       change: paymentMethod === "cash" ? change : 0,
-      date: new Date().toISOString(),
+      paymentMethod,
+      date: now.split("T")[0],
+      createdAt: now,
       cashierId: user.uid,
       cashierName: user.displayName || user.email || "Cashier",
     }

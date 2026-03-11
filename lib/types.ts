@@ -68,7 +68,68 @@ export interface Company {
   id: string
   userId: string
   name: string
+  address?: string
+  phone?: string
+  email?: string
   createdAt: string
+}
+
+export interface Product {
+  id: string
+  name: string
+  category: string
+  price: number
+  cost: number
+  stock: number
+  unit: string
+  barcode: string
+  lowStockThreshold: number
+  isActive: boolean
+  createdAt: string
+}
+
+export interface SaleItem {
+  productId: string
+  productName: string
+  quantity: number
+  unitPrice: number
+  subtotal: number
+}
+
+export interface Sale {
+  id: string
+  receiptNumber: string
+  items: SaleItem[]
+  subtotal: number
+  discount: number
+  taxRate: number
+  tax: number
+  taxAmount: number
+  total: number
+  amountPaid: number
+  amountTendered: number
+  change: number
+  paymentMethod: string
+  cashierId?: string
+  cashierName?: string
+  date: string
+  createdAt: string
+}
+
+export interface TeamMember {
+  id: string
+  email: string
+  name: string
+  role: "cashier"
+  createdAt: string
+  isActive: boolean
+}
+
+export interface PrintSettings {
+  showCompanyName: boolean
+  showCompanyAddress: boolean
+  showTax: boolean
+  footerMessage: string
 }
 
 export interface InvoiceItem {

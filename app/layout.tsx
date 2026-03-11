@@ -12,8 +12,8 @@ const _geistMono = Geist_Mono({ subsets: ["latin"] })
 
 export const metadata: Metadata = {
   // <CHANGE> Updated metadata for CRM app
-  title: "BuildTrack CRM - Construction Management",
-  description: "Unified employee, attendance, payroll, and project management for construction companies",
+  title: "BuzinessIQ - Business Management",
+  description: "Unified employee, attendance, payroll, project, and POS management for Ghanaian businesses",
   generator: "v0.app",
   icons: {
     icon: [

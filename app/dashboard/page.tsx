@@ -54,7 +54,7 @@ export default function Dashboard({ onSearchOpen }: { onSearchOpen?: () => void 
 
                     <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 animate-in fade-in slide-in-from-top-4 duration-500">
                         <div>
-                            <p className="text-muted-foreground">Welcome back to BuildTrack</p>
+                            <p className="text-muted-foreground">Welcome back to BuzinessIQ</p>
                         </div>
                         <div className="text-sm font-medium text-muted-foreground bg-card px-4 py-2 rounded-full border shadow-sm">
                             {currentDate}

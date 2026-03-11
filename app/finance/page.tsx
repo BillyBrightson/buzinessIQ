@@ -25,12 +25,11 @@ export default function FinanceDashboard({ onSearchOpen }: { onSearchOpen?: () =
 
     // Calculate statistics
     const totalRevenue = payments
-        .filter(p => p.status === "completed")
         .reduce((sum, p) => sum + p.amount, 0)
 
-    const pendingPayments = payments
-        .filter(p => p.status === "pending")
-        .reduce((sum, p) => sum + p.amount, 0)
+    const pendingPayments = invoices
+        .filter(i => i.status === "sent" || i.status === "overdue")
+        .reduce((sum, i) => sum + i.total, 0)
 
     const outstandingInvoices = invoices
         .filter(i => i.status === "sent" || i.status === "overdue")
