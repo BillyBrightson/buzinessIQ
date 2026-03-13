@@ -19,7 +19,7 @@ const GHS = (n: number) =>
 const TAX_RATE = 0 // Set to e.g. 0.15 for 15% VAT
 
 export default function POSPage({ onSearchOpen }: { onSearchOpen?: () => void }) {
-  const { user } = useAuth()
+  const { user, currentBranch, currentBranchId } = useAuth()
   const [products, setProducts] = useState<Product[]>([])
   const [cart, setCart] = useState<SaleItem[]>([])
   const [search, setSearch] = useState("")
@@ -146,6 +146,8 @@ export default function POSPage({ onSearchOpen }: { onSearchOpen?: () => void })
       createdAt: now,
       cashierId: user.uid,
       cashierName: user.displayName || user.email || "Cashier",
+      branchId: currentBranchId || undefined,
+      branchName: currentBranch?.name || undefined,
     }
 
     storage.sales.add(sale, user.uid)

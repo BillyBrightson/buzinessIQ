@@ -33,6 +33,15 @@ export default function OnboardingPage() {
                 user.uid,
             )
 
+            // Create the default Main Branch
+            storage.branches.add({
+                id: crypto.randomUUID(),
+                name: "Main Branch",
+                isDefault: true,
+                isActive: true,
+                createdAt: new Date().toISOString(),
+            }, user.uid)
+
             // Create initial Admin employee for the user
             storage.employees.add({
                 id: crypto.randomUUID(),

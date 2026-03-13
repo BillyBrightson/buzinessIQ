@@ -1,4 +1,4 @@
-import type { Employee, AttendanceRecord, PayrollRecord, Project, Task, Company, Invoice, Payment, ChartOfAccount, JournalEntry, AccountTransaction, BudgetItem, Product, Sale, TeamMember, PrintSettings, Expense } from "./types"
+import type { Employee, AttendanceRecord, PayrollRecord, Project, Task, Company, Invoice, Payment, ChartOfAccount, JournalEntry, AccountTransaction, BudgetItem, Product, Sale, TeamMember, PrintSettings, Expense, RoleAssignment, Branch, StockTransfer, CashDrawer } from "./types"
 import { db } from "./firebase"
 import { collection, doc, setDoc, deleteDoc, getDocs, getDoc } from "firebase/firestore"
 
@@ -27,6 +27,7 @@ export async function syncFromCloud(userId: string): Promise<void> {
     "employees", "attendance", "payroll", "projects", "tasks",
     "invoices", "payments", "products", "sales", "teamMembers",
     "expenses", "chartOfAccounts", "journalEntries", "accountTransactions", "budgets",
+    "roleAssignments", "branches", "stockTransfers", "cashDrawers",
   ]
 
   await Promise.allSettled(
@@ -43,6 +44,12 @@ export async function syncFromCloud(userId: string): Promise<void> {
   const companySnap = await getDoc(doc(db, "users", userId, "company", "data"))
   if (companySnap.exists()) {
     localStorage.setItem(`crm_${userId}_company`, JSON.stringify(companySnap.data()))
+  }
+
+  // Permission overrides is a single document
+  const overridesSnap = await getDoc(doc(db, "users", userId, "settings", "permissionOverrides"))
+  if (overridesSnap.exists()) {
+    localStorage.setItem(`crm_${userId}_permissionOverrides`, JSON.stringify(overridesSnap.data()))
   }
 }
 
@@ -65,6 +72,11 @@ const getKeys = (userId?: string) => ({
   sales: userId ? `crm_${userId}_sales` : "crm_sales",
   teamMembers: userId ? `crm_${userId}_teamMembers` : "crm_teamMembers",
   expenses: userId ? `crm_${userId}_expenses` : "crm_expenses",
+  roleAssignments: userId ? `crm_${userId}_roleAssignments` : "crm_roleAssignments",
+  permissionOverrides: userId ? `crm_${userId}_permissionOverrides` : "crm_permissionOverrides",
+  branches: userId ? `crm_${userId}_branches` : "crm_branches",
+  stockTransfers: userId ? `crm_${userId}_stockTransfers` : "crm_stockTransfers",
+  cashDrawers: userId ? `crm_${userId}_cashDrawers` : "crm_cashDrawers",
 })
 
 // ─── Sample data initialization (demo / no-user mode only) ─────────────────
@@ -284,6 +296,18 @@ function initializeSampleData(userId?: string) {
       }
     ]
     localStorage.setItem(keys.journalEntries, JSON.stringify(sampleJournalEntries))
+  }
+}
+
+// ─── Role assignment lookup (reads from Firestore root-level collection) ────
+
+export async function getRoleAssignment(uid: string): Promise<RoleAssignment | null> {
+  if (!uid || typeof window === "undefined") return null
+  try {
+    const snap = await getDoc(doc(db, "roleAssignments", uid))
+    return snap.exists() ? (snap.data() as RoleAssignment) : null
+  } catch {
+    return null
   }
 }
 
@@ -770,6 +794,159 @@ export const storage = {
       const keys = getKeys(userId)
       localStorage.setItem(keys.expenses, JSON.stringify(filtered))
       if (userId) fsDel(userId, "expenses", id)
+    },
+  },
+
+  roleAssignments: {
+    getByAdmin: (adminUid: string): RoleAssignment[] => {
+      const keys = getKeys(adminUid)
+      return JSON.parse(localStorage.getItem(keys.roleAssignments) || "[]")
+    },
+    add: (assignment: RoleAssignment, adminUid: string) => {
+      const all = storage.roleAssignments.getByAdmin(adminUid)
+      all.push(assignment)
+      const keys = getKeys(adminUid)
+      localStorage.setItem(keys.roleAssignments, JSON.stringify(all))
+      // Write under admin's Firestore sub-collection
+      fsSet(adminUid, "roleAssignments", assignment.uid, assignment)
+      // Also write to root-level collection so sub-accounts can look themselves up
+      if (typeof window !== "undefined") {
+        setDoc(doc(db, "roleAssignments", assignment.uid), assignment).catch((err) =>
+          console.warn("[Firestore] RoleAssignment root write failed:", err)
+        )
+      }
+    },
+    update: (uid: string, updates: Partial<RoleAssignment>, adminUid: string) => {
+      const all = storage.roleAssignments.getByAdmin(adminUid)
+      const index = all.findIndex((r) => r.uid === uid)
+      if (index >= 0) {
+        all[index] = { ...all[index], ...updates }
+        const keys = getKeys(adminUid)
+        localStorage.setItem(keys.roleAssignments, JSON.stringify(all))
+        fsSet(adminUid, "roleAssignments", all[index].uid, all[index])
+        if (typeof window !== "undefined") {
+          setDoc(doc(db, "roleAssignments", uid), all[index]).catch((err) =>
+            console.warn("[Firestore] RoleAssignment root update failed:", err)
+          )
+        }
+      }
+    },
+  },
+
+  branches: {
+    getAll: (userId: string): Branch[] => {
+      const keys = getKeys(userId)
+      return JSON.parse(localStorage.getItem(keys.branches) || "[]")
+    },
+    getActive: (userId: string): Branch[] =>
+      storage.branches.getAll(userId).filter(b => b.isActive),
+    getDefault: (userId: string): Branch | null =>
+      storage.branches.getAll(userId).find(b => b.isDefault && b.isActive) ?? null,
+    add: (branch: Branch, userId: string) => {
+      const all = storage.branches.getAll(userId)
+      all.push(branch)
+      const keys = getKeys(userId)
+      localStorage.setItem(keys.branches, JSON.stringify(all))
+      fsSet(userId, "branches", branch.id, branch)
+    },
+    update: (id: string, updates: Partial<Branch>, userId: string) => {
+      const all = storage.branches.getAll(userId)
+      const index = all.findIndex(b => b.id === id)
+      if (index >= 0) {
+        all[index] = { ...all[index], ...updates }
+        const keys = getKeys(userId)
+        localStorage.setItem(keys.branches, JSON.stringify(all))
+        fsSet(userId, "branches", all[index].id, all[index])
+      }
+    },
+  },
+
+  stockTransfers: {
+    getAll: (userId: string): StockTransfer[] => {
+      const keys = getKeys(userId)
+      return JSON.parse(localStorage.getItem(keys.stockTransfers) || "[]")
+    },
+    getByBranch: (branchId: string, userId: string): StockTransfer[] =>
+      storage.stockTransfers.getAll(userId).filter(
+        t => t.fromBranchId === branchId || t.toBranchId === branchId
+      ),
+    add: (transfer: StockTransfer, userId: string) => {
+      const all = storage.stockTransfers.getAll(userId)
+      all.push(transfer)
+      const keys = getKeys(userId)
+      localStorage.setItem(keys.stockTransfers, JSON.stringify(all))
+      fsSet(userId, "stockTransfers", transfer.id, transfer)
+    },
+    update: (id: string, updates: Partial<StockTransfer>, userId: string) => {
+      const all = storage.stockTransfers.getAll(userId)
+      const index = all.findIndex(t => t.id === id)
+      if (index >= 0) {
+        all[index] = { ...all[index], ...updates }
+        const keys = getKeys(userId)
+        localStorage.setItem(keys.stockTransfers, JSON.stringify(all))
+        fsSet(userId, "stockTransfers", all[index].id, all[index])
+      }
+    },
+  },
+
+  cashDrawers: {
+    getAll: (userId: string): CashDrawer[] => {
+      const keys = getKeys(userId)
+      return JSON.parse(localStorage.getItem(keys.cashDrawers) || "[]")
+    },
+    getByBranch: (branchId: string, userId: string): CashDrawer[] =>
+      storage.cashDrawers.getAll(userId).filter(d => d.branchId === branchId),
+    getOpenDrawer: (branchId: string, date: string, userId: string): CashDrawer | null =>
+      storage.cashDrawers.getAll(userId).find(
+        d => d.branchId === branchId && d.date === date && d.status === "open"
+      ) ?? null,
+    add: (drawer: CashDrawer, userId: string) => {
+      const all = storage.cashDrawers.getAll(userId)
+      all.push(drawer)
+      const keys = getKeys(userId)
+      localStorage.setItem(keys.cashDrawers, JSON.stringify(all))
+      fsSet(userId, "cashDrawers", drawer.id, drawer)
+    },
+    update: (id: string, updates: Partial<CashDrawer>, userId: string) => {
+      const all = storage.cashDrawers.getAll(userId)
+      const index = all.findIndex(d => d.id === id)
+      if (index >= 0) {
+        all[index] = { ...all[index], ...updates }
+        const keys = getKeys(userId)
+        localStorage.setItem(keys.cashDrawers, JSON.stringify(all))
+        fsSet(userId, "cashDrawers", all[index].id, all[index])
+      }
+    },
+  },
+
+  // Active branch is device-level (not cloud-synced)
+  activeBranch: {
+    get: (adminUid: string): string => {
+      if (typeof window === "undefined") return ""
+      return localStorage.getItem(`crm_activeBranch_${adminUid}`) ?? ""
+    },
+    set: (branchId: string, adminUid: string) => {
+      localStorage.setItem(`crm_activeBranch_${adminUid}`, branchId)
+    },
+  },
+
+  // Permission overrides — admin can customise which roles access each feature
+  // Stored as Record<featureId, AppRole[]>
+  permissionOverrides: {
+    get: (adminUid: string): Record<string, string[]> => {
+      const keys = getKeys(adminUid)
+      const data = localStorage.getItem(keys.permissionOverrides)
+      return data ? JSON.parse(data) : {}
+    },
+    set: (overrides: Record<string, string[]>, adminUid: string) => {
+      const keys = getKeys(adminUid)
+      localStorage.setItem(keys.permissionOverrides, JSON.stringify(overrides))
+      // Persist to Firestore as a single document
+      if (typeof window !== "undefined") {
+        setDoc(doc(db, "users", adminUid, "settings", "permissionOverrides"), overrides).catch(err =>
+          console.warn("[Firestore] PermissionOverrides write failed:", err)
+        )
+      }
     },
   },
 

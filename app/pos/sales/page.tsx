@@ -5,11 +5,11 @@ import { Sidebar } from "@/components/sidebar"
 import { TopBar } from "@/components/top-bar"
 import { useAuth } from "@/components/auth-provider"
 import { storage } from "@/lib/storage"
-import type { Sale, Company, PrintSettings } from "@/lib/types"
+import type { Sale, Company, PrintSettings, Branch } from "@/lib/types"
 import { ReceiptPrint } from "@/components/pos/receipt-print"
 import {
   Search, Receipt, X, Banknote, Smartphone, CreditCard,
-  Building2, TrendingUp, ShoppingCart, Wallet, ChevronRight
+  Building2, TrendingUp, ShoppingCart, Wallet, ChevronRight, MapPin
 } from "lucide-react"
 
 const GHS = (n: number) =>
@@ -30,17 +30,23 @@ const PAYMENT_COLORS: Record<Sale["paymentMethod"], string> = {
 }
 
 export default function SalesHistoryPage({ onSearchOpen }: { onSearchOpen?: () => void }) {
-  const { user } = useAuth()
+  const { user, effectiveUid, currentBranchId, userRole } = useAuth()
   const [sales, setSales] = useState<Sale[]>([])
   const [printSale, setPrintSale] = useState<Sale | null>(null)
   const [company, setCompany] = useState<Company | null>(null)
   const [printSettings, setPrintSettingsState] = useState<PrintSettings>({ showCompanyName: true, showCompanyAddress: true, showTax: true, footerMessage: "Thank you for your patronage!" })
+  const [branches, setBranches] = useState<Branch[]>([])
+  const [branchFilter, setBranchFilter] = useState<string>("current")
   const printTriggered = useRef(false)
 
   useEffect(() => {
-    if (user) setCompany(storage.company.get(user.uid))
+    const uid = effectiveUid || user?.uid
+    if (uid) {
+      setCompany(storage.company.get(uid))
+      setBranches(storage.branches.getActive(uid))
+    }
     setPrintSettingsState(storage.printSettings.get())
-  }, [user])
+  }, [user, effectiveUid])
 
   useEffect(() => {
     if (printSale && !printTriggered.current) {
@@ -62,13 +68,19 @@ export default function SalesHistoryPage({ onSearchOpen }: { onSearchOpen?: () =
   const [selectedSale, setSelectedSale] = useState<Sale | null>(null)
 
   useEffect(() => {
-    if (user) setSales(storage.sales.getAll(user.uid))
-  }, [user])
+    const uid = effectiveUid || user?.uid
+    if (uid) setSales(storage.sales.getAll(uid))
+  }, [user, effectiveUid])
 
   const filtered = useMemo(() => {
     let result = [...sales].sort((a, b) => b.date.localeCompare(a.date))
     if (filterMode === "day") {
       result = result.filter((s) => s.date.startsWith(dateFilter))
+    }
+    if (branchFilter === "current" && currentBranchId) {
+      result = result.filter((s) => !s.branchId || s.branchId === currentBranchId)
+    } else if (branchFilter !== "all") {
+      result = result.filter((s) => s.branchId === branchFilter)
     }
     if (search.trim()) {
       result = result.filter(
@@ -78,12 +90,17 @@ export default function SalesHistoryPage({ onSearchOpen }: { onSearchOpen?: () =
       )
     }
     return result
-  }, [sales, search, dateFilter, filterMode])
+  }, [sales, search, dateFilter, filterMode, branchFilter, currentBranchId])
 
   const stats = useMemo(() => {
-    const src = filterMode === "day"
+    let src = filterMode === "day"
       ? sales.filter((s) => s.date.startsWith(dateFilter))
       : sales
+    if (branchFilter === "current" && currentBranchId) {
+      src = src.filter((s) => !s.branchId || s.branchId === currentBranchId)
+    } else if (branchFilter !== "all") {
+      src = src.filter((s) => s.branchId === branchFilter)
+    }
     return {
       totalSales: src.length,
       totalRevenue: src.reduce((s, sale) => s + sale.total, 0),
@@ -149,6 +166,20 @@ export default function SalesHistoryPage({ onSearchOpen }: { onSearchOpen?: () =
                   className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-input bg-card text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
                 />
               </div>
+              {userRole === "admin" && branches.length > 1 && (
+                <div className="relative shrink-0">
+                  <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={15} />
+                  <select
+                    value={branchFilter}
+                    onChange={(e) => setBranchFilter(e.target.value)}
+                    className="pl-9 pr-3 py-2.5 rounded-xl border border-input bg-card text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary appearance-none"
+                  >
+                    <option value="current">Current Branch</option>
+                    <option value="all">All Branches</option>
+                    {branches.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
+                  </select>
+                </div>
+              )}
               <div className="flex bg-muted rounded-xl p-1 shrink-0">
                 <button
                   onClick={() => setFilterMode("day")}
@@ -202,6 +233,9 @@ export default function SalesHistoryPage({ onSearchOpen }: { onSearchOpen?: () =
                         <p className="font-semibold text-foreground">{sale.receiptNumber}</p>
                         <p className="text-xs text-muted-foreground">
                           {new Date(sale.date).toLocaleString()} · {sale.items.length} item{sale.items.length !== 1 ? "s" : ""}
+                          {branchFilter === "all" && sale.branchName && (
+                            <span className="ml-1 text-primary/70">· {sale.branchName}</span>
+                          )}
                         </p>
                       </div>
                       <div className="flex items-center gap-3 shrink-0">

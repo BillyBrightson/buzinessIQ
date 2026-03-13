@@ -113,17 +113,79 @@ export interface Sale {
   paymentMethod: string
   cashierId?: string
   cashierName?: string
+  branchId?: string
+  branchName?: string
   date: string
   createdAt: string
 }
+
+export type AppRole = "admin" | "store_keeper" | "accountant"
 
 export interface TeamMember {
   id: string
   email: string
   name: string
-  role: "cashier"
+  role: "cashier" | "store_keeper" | "accountant"
+  uid?: string // Firebase UID of the created account
   createdAt: string
   isActive: boolean
+}
+
+export interface RoleAssignment {
+  uid: string // Firebase UID of the team member
+  email: string
+  name: string
+  role: Exclude<AppRole, "admin">
+  adminUid: string // Which admin created this
+  branchId?: string // Lock this member to a specific branch
+  branchName?: string
+  createdAt: string
+  isActive: boolean
+}
+
+export interface Branch {
+  id: string
+  name: string
+  address?: string
+  isDefault: boolean
+  isActive: boolean
+  createdAt: string
+}
+
+export interface StockTransferItem {
+  productId: string
+  productName: string
+  quantity: number
+}
+
+export interface StockTransfer {
+  id: string
+  fromBranchId: string
+  fromBranchName: string
+  toBranchId: string
+  toBranchName: string
+  items: StockTransferItem[]
+  status: "pending" | "completed" | "cancelled"
+  notes?: string
+  transferredBy?: string
+  createdAt: string
+  completedAt?: string
+}
+
+export interface CashDrawer {
+  id: string
+  branchId: string
+  branchName: string
+  date: string
+  openingFloat: number
+  closingFloat?: number
+  totalSales?: number
+  variance?: number
+  notes?: string
+  status: "open" | "closed"
+  openedBy?: string
+  closedBy?: string
+  createdAt: string
 }
 
 export interface PrintSettings {
