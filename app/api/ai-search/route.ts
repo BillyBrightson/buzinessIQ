@@ -1,7 +1,7 @@
 import { NextRequest } from "next/server"
-import Anthropic from "@anthropic-ai/sdk"
+import { GoogleGenerativeAI } from "@google/generative-ai"
 
-const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
+const genAI = new GoogleGenerativeAI(process.env.GOOGLE_AI_API_KEY!)
 
 function buildSystemPrompt(context: Record<string, unknown>): string {
   const { role, accessiblePages, stats, today } = context as {
@@ -41,24 +41,20 @@ export async function POST(req: NextRequest) {
       return new Response("Query is required", { status: 400 })
     }
 
-    const stream = client.messages.stream({
-      model: "claude-haiku-4-5",
-      max_tokens: 512,
-      system: buildSystemPrompt(context),
-      messages: [{ role: "user", content: query }],
+    const model = genAI.getGenerativeModel({
+      model: "gemini-2.0-flash",
+      systemInstruction: buildSystemPrompt(context),
     })
+
+    const result = await model.generateContentStream(query)
 
     const encoder = new TextEncoder()
     const readable = new ReadableStream({
       async start(controller) {
         try {
-          for await (const event of stream) {
-            if (
-              event.type === "content_block_delta" &&
-              event.delta.type === "text_delta"
-            ) {
-              controller.enqueue(encoder.encode(event.delta.text))
-            }
+          for await (const chunk of result.stream) {
+            const text = chunk.text()
+            if (text) controller.enqueue(encoder.encode(text))
           }
         } finally {
           controller.close()
