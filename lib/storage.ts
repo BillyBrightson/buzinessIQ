@@ -1,5 +1,52 @@
 import type { Employee, AttendanceRecord, PayrollRecord, Project, Task, Company, Invoice, Payment, ChartOfAccount, JournalEntry, AccountTransaction, BudgetItem, Product, Sale, TeamMember, PrintSettings, Expense } from "./types"
+import { db } from "./firebase"
+import { collection, doc, setDoc, deleteDoc, getDocs, getDoc } from "firebase/firestore"
 
+// ─── Firestore helpers (fire-and-forget) ───────────────────────────────────
+
+function fsSet(userId: string, col: string, id: string, data: object) {
+  if (!userId || typeof window === "undefined") return
+  setDoc(doc(db, "users", userId, col, id), data).catch(err =>
+    console.warn(`[Firestore] Write failed ${col}/${id}:`, err)
+  )
+}
+
+function fsDel(userId: string, col: string, id: string) {
+  if (!userId || typeof window === "undefined") return
+  deleteDoc(doc(db, "users", userId, col, id)).catch(err =>
+    console.warn(`[Firestore] Delete failed ${col}/${id}:`, err)
+  )
+}
+
+// ─── Sync FROM Firestore → localStorage on login ───────────────────────────
+
+export async function syncFromCloud(userId: string): Promise<void> {
+  if (!userId || typeof window === "undefined") return
+
+  const arrayCols = [
+    "employees", "attendance", "payroll", "projects", "tasks",
+    "invoices", "payments", "products", "sales", "teamMembers",
+    "expenses", "chartOfAccounts", "journalEntries", "accountTransactions", "budgets",
+  ]
+
+  await Promise.allSettled(
+    arrayCols.map(async (col) => {
+      const snap = await getDocs(collection(db, "users", userId, col))
+      if (!snap.empty) {
+        const data = snap.docs.map(d => d.data())
+        localStorage.setItem(`crm_${userId}_${col}`, JSON.stringify(data))
+      }
+    })
+  )
+
+  // Company is a single document
+  const companySnap = await getDoc(doc(db, "users", userId, "company", "data"))
+  if (companySnap.exists()) {
+    localStorage.setItem(`crm_${userId}_company`, JSON.stringify(companySnap.data()))
+  }
+}
+
+// ─── localStorage key helpers ───────────────────────────────────────────────
 
 const getKeys = (userId?: string) => ({
   employees: userId ? `crm_${userId}_employees` : "crm_employees",
@@ -20,7 +67,8 @@ const getKeys = (userId?: string) => ({
   expenses: userId ? `crm_${userId}_expenses` : "crm_expenses",
 })
 
-// Initialize with sample data only if no userId is provided (Demo Mode)
+// ─── Sample data initialization (demo / no-user mode only) ─────────────────
+
 function initializeSampleData(userId?: string) {
   if (userId || typeof window === "undefined") return
 
@@ -175,29 +223,19 @@ function initializeSampleData(userId?: string) {
     localStorage.setItem(keys.payments, JSON.stringify(samplePayments))
   }
 
-  // Initialize Chart of Accounts with construction-specific accounts
   if (!localStorage.getItem(keys.chartOfAccounts)) {
     const sampleChartOfAccounts: ChartOfAccount[] = [
-      // Assets
       { id: "1000", code: "1000", name: "Cash", type: "asset", subType: "current-asset", isActive: true, balance: 50000, description: "Cash on hand and in bank" },
       { id: "1100", code: "1100", name: "Accounts Receivable", type: "asset", subType: "current-asset", isActive: true, balance: 20000, description: "Money owed by clients" },
       { id: "1200", code: "1200", name: "Inventory - Materials", type: "asset", subType: "current-asset", isActive: true, balance: 15000, description: "Construction materials inventory" },
       { id: "1500", code: "1500", name: "Equipment", type: "asset", subType: "fixed-asset", isActive: true, balance: 100000, description: "Construction equipment and machinery" },
       { id: "1600", code: "1600", name: "Vehicles", type: "asset", subType: "fixed-asset", isActive: true, balance: 75000, description: "Company vehicles" },
-
-      // Liabilities
       { id: "2000", code: "2000", name: "Accounts Payable", type: "liability", subType: "current-liability", isActive: true, balance: 12000, description: "Money owed to suppliers" },
       { id: "2100", code: "2100", name: "Wages Payable", type: "liability", subType: "current-liability", isActive: true, balance: 8000, description: "Unpaid employee wages" },
       { id: "2500", code: "2500", name: "Equipment Loan", type: "liability", subType: "long-term-liability", isActive: true, balance: 50000, description: "Long-term equipment financing" },
-
-      // Equity
       { id: "3000", code: "3000", name: "Owner's Equity", type: "equity", isActive: true, balance: 190000, description: "Owner's investment and retained earnings" },
-
-      // Revenue
       { id: "4000", code: "4000", name: "Construction Revenue", type: "revenue", isActive: true, balance: 0, description: "Revenue from construction projects" },
       { id: "4100", code: "4100", name: "Service Revenue", type: "revenue", isActive: true, balance: 0, description: "Revenue from services" },
-
-      // Expenses
       { id: "5000", code: "5000", name: "Materials Expense", type: "expense", subType: "cost-of-goods", isActive: true, balance: 0, description: "Cost of construction materials" },
       { id: "5100", code: "5100", name: "Labor Expense", type: "expense", subType: "cost-of-goods", isActive: true, balance: 0, description: "Direct labor costs" },
       { id: "5200", code: "5200", name: "Subcontractor Expense", type: "expense", subType: "cost-of-goods", isActive: true, balance: 0, description: "Payments to subcontractors" },
@@ -210,7 +248,6 @@ function initializeSampleData(userId?: string) {
     localStorage.setItem(keys.chartOfAccounts, JSON.stringify(sampleChartOfAccounts))
   }
 
-  // Initialize sample journal entries
   if (!localStorage.getItem(keys.journalEntries)) {
     const sampleJournalEntries: JournalEntry[] = [
       {
@@ -250,6 +287,8 @@ function initializeSampleData(userId?: string) {
   }
 }
 
+// ─── Storage API ────────────────────────────────────────────────────────────
+
 export const storage = {
   company: {
     get: (userId?: string): Company | null => {
@@ -260,8 +299,10 @@ export const storage = {
     set: (company: Company, userId?: string) => {
       const keys = getKeys(userId)
       localStorage.setItem(keys.company, JSON.stringify(company))
+      if (userId) fsSet(userId, "company", "data", company)
     }
   },
+
   employees: {
     getAll: (userId?: string): Employee[] => {
       initializeSampleData(userId)
@@ -279,6 +320,7 @@ export const storage = {
       all.push(employee)
       const keys = getKeys(userId)
       localStorage.setItem(keys.employees, JSON.stringify(all))
+      if (userId) fsSet(userId, "employees", employee.id, employee)
     },
     update: (id: string, updates: Partial<Employee>, userId?: string) => {
       const all = storage.employees.getAll(userId)
@@ -287,6 +329,7 @@ export const storage = {
         all[index] = { ...all[index], ...updates }
         const keys = getKeys(userId)
         localStorage.setItem(keys.employees, JSON.stringify(all))
+        if (userId) fsSet(userId, "employees", all[index].id, all[index])
       }
     },
     delete: (id: string, userId?: string) => {
@@ -297,9 +340,11 @@ export const storage = {
         all[index].deactivatedDate = new Date().toISOString().split("T")[0]
         const keys = getKeys(userId)
         localStorage.setItem(keys.employees, JSON.stringify(all))
+        if (userId) fsSet(userId, "employees", all[index].id, all[index])
       }
     },
   },
+
   projects: {
     getAll: (userId?: string): Project[] => {
       initializeSampleData(userId)
@@ -311,6 +356,7 @@ export const storage = {
       all.push(project)
       const keys = getKeys(userId)
       localStorage.setItem(keys.projects, JSON.stringify(all))
+      if (userId) fsSet(userId, "projects", project.id, project)
     },
     update: (id: string, updates: Partial<Project>, userId?: string) => {
       const all = storage.projects.getAll(userId)
@@ -319,12 +365,14 @@ export const storage = {
         all[index] = { ...all[index], ...updates }
         const keys = getKeys(userId)
         localStorage.setItem(keys.projects, JSON.stringify(all))
+        if (userId) fsSet(userId, "projects", all[index].id, all[index])
       }
     },
     getById: (id: string, userId?: string): Project | undefined => {
       return storage.projects.getAll(userId).find((p) => p.id === id)
     },
   },
+
   tasks: {
     getAll: (userId?: string): Task[] => {
       initializeSampleData(userId)
@@ -339,6 +387,7 @@ export const storage = {
       all.push(task)
       const keys = getKeys(userId)
       localStorage.setItem(keys.tasks, JSON.stringify(all))
+      if (userId) fsSet(userId, "tasks", task.id, task)
     },
     update: (id: string, updates: Partial<Task>, userId?: string) => {
       const all = storage.tasks.getAll(userId)
@@ -347,6 +396,7 @@ export const storage = {
         all[index] = { ...all[index], ...updates }
         const keys = getKeys(userId)
         localStorage.setItem(keys.tasks, JSON.stringify(all))
+        if (userId) fsSet(userId, "tasks", all[index].id, all[index])
       }
     },
     getById: (id: string, userId?: string): Task | undefined => {
@@ -357,8 +407,10 @@ export const storage = {
       const filtered = all.filter((t) => t.id !== id)
       const keys = getKeys(userId)
       localStorage.setItem(keys.tasks, JSON.stringify(filtered))
+      if (userId) fsDel(userId, "tasks", id)
     },
   },
+
   attendance: {
     getAll: (userId?: string): AttendanceRecord[] => {
       const keys = getKeys(userId)
@@ -375,6 +427,7 @@ export const storage = {
       all.push(record)
       const keys = getKeys(userId)
       localStorage.setItem(keys.attendance, JSON.stringify(all))
+      if (userId) fsSet(userId, "attendance", record.id, record)
     },
     update: (id: string, updates: Partial<AttendanceRecord>, userId?: string) => {
       const all = storage.attendance.getAll(userId)
@@ -383,9 +436,11 @@ export const storage = {
         all[index] = { ...all[index], ...updates }
         const keys = getKeys(userId)
         localStorage.setItem(keys.attendance, JSON.stringify(all))
+        if (userId) fsSet(userId, "attendance", all[index].id, all[index])
       }
     },
   },
+
   payroll: {
     getAll: (userId?: string): PayrollRecord[] => {
       const keys = getKeys(userId)
@@ -399,6 +454,7 @@ export const storage = {
       all.push(record)
       const keys = getKeys(userId)
       localStorage.setItem(keys.payroll, JSON.stringify(all))
+      if (userId) fsSet(userId, "payroll", record.id, record)
     },
     update: (id: string, updates: Partial<PayrollRecord>, userId?: string) => {
       const all = storage.payroll.getAll(userId)
@@ -407,9 +463,11 @@ export const storage = {
         all[index] = { ...all[index], ...updates }
         const keys = getKeys(userId)
         localStorage.setItem(keys.payroll, JSON.stringify(all))
+        if (userId) fsSet(userId, "payroll", all[index].id, all[index])
       }
     },
   },
+
   invoices: {
     getAll: (userId?: string): Invoice[] => {
       initializeSampleData(userId)
@@ -424,6 +482,7 @@ export const storage = {
       all.push(invoice)
       const keys = getKeys(userId)
       localStorage.setItem(keys.invoices, JSON.stringify(all))
+      if (userId) fsSet(userId, "invoices", invoice.id, invoice)
     },
     update: (id: string, updates: Partial<Invoice>, userId?: string) => {
       const all = storage.invoices.getAll(userId)
@@ -432,6 +491,7 @@ export const storage = {
         all[index] = { ...all[index], ...updates }
         const keys = getKeys(userId)
         localStorage.setItem(keys.invoices, JSON.stringify(all))
+        if (userId) fsSet(userId, "invoices", all[index].id, all[index])
       }
     },
     delete: (id: string, userId?: string) => {
@@ -439,8 +499,10 @@ export const storage = {
       const filtered = all.filter((i) => i.id !== id)
       const keys = getKeys(userId)
       localStorage.setItem(keys.invoices, JSON.stringify(filtered))
+      if (userId) fsDel(userId, "invoices", id)
     },
   },
+
   payments: {
     getAll: (userId?: string): Payment[] => {
       initializeSampleData(userId)
@@ -455,6 +517,7 @@ export const storage = {
       all.push(payment)
       const keys = getKeys(userId)
       localStorage.setItem(keys.payments, JSON.stringify(all))
+      if (userId) fsSet(userId, "payments", payment.id, payment)
     },
     update: (id: string, updates: Partial<Payment>, userId?: string) => {
       const all = storage.payments.getAll(userId)
@@ -463,6 +526,7 @@ export const storage = {
         all[index] = { ...all[index], ...updates }
         const keys = getKeys(userId)
         localStorage.setItem(keys.payments, JSON.stringify(all))
+        if (userId) fsSet(userId, "payments", all[index].id, all[index])
       }
     },
     delete: (id: string, userId?: string) => {
@@ -470,8 +534,10 @@ export const storage = {
       const filtered = all.filter((p) => p.id !== id)
       const keys = getKeys(userId)
       localStorage.setItem(keys.payments, JSON.stringify(filtered))
+      if (userId) fsDel(userId, "payments", id)
     },
   },
+
   chartOfAccounts: {
     getAll: (userId?: string): ChartOfAccount[] => {
       initializeSampleData(userId)
@@ -489,6 +555,7 @@ export const storage = {
       all.push(account)
       const keys = getKeys(userId)
       localStorage.setItem(keys.chartOfAccounts, JSON.stringify(all))
+      if (userId) fsSet(userId, "chartOfAccounts", account.id, account)
     },
     update: (id: string, updates: Partial<ChartOfAccount>, userId?: string) => {
       const all = storage.chartOfAccounts.getAll(userId)
@@ -497,9 +564,11 @@ export const storage = {
         all[index] = { ...all[index], ...updates }
         const keys = getKeys(userId)
         localStorage.setItem(keys.chartOfAccounts, JSON.stringify(all))
+        if (userId) fsSet(userId, "chartOfAccounts", all[index].id, all[index])
       }
     },
   },
+
   journalEntries: {
     getAll: (userId?: string): JournalEntry[] => {
       initializeSampleData(userId)
@@ -517,6 +586,7 @@ export const storage = {
       all.push(entry)
       const keys = getKeys(userId)
       localStorage.setItem(keys.journalEntries, JSON.stringify(all))
+      if (userId) fsSet(userId, "journalEntries", entry.id, entry)
     },
     update: (id: string, updates: Partial<JournalEntry>, userId?: string) => {
       const all = storage.journalEntries.getAll(userId)
@@ -525,9 +595,11 @@ export const storage = {
         all[index] = { ...all[index], ...updates }
         const keys = getKeys(userId)
         localStorage.setItem(keys.journalEntries, JSON.stringify(all))
+        if (userId) fsSet(userId, "journalEntries", all[index].id, all[index])
       }
     },
   },
+
   accountTransactions: {
     getAll: (userId?: string): AccountTransaction[] => {
       const keys = getKeys(userId)
@@ -541,8 +613,10 @@ export const storage = {
       all.push(transaction)
       const keys = getKeys(userId)
       localStorage.setItem(keys.accountTransactions, JSON.stringify(all))
+      if (userId) fsSet(userId, "accountTransactions", transaction.id, transaction)
     },
   },
+
   budgets: {
     getAll: (userId?: string): BudgetItem[] => {
       const keys = getKeys(userId)
@@ -556,6 +630,7 @@ export const storage = {
       all.push(budget)
       const keys = getKeys(userId)
       localStorage.setItem(keys.budgets, JSON.stringify(all))
+      if (userId) fsSet(userId, "budgets", budget.id, budget)
     },
     update: (id: string, updates: Partial<BudgetItem>, userId?: string) => {
       const all = storage.budgets.getAll(userId)
@@ -564,9 +639,11 @@ export const storage = {
         all[index] = { ...all[index], ...updates }
         const keys = getKeys(userId)
         localStorage.setItem(keys.budgets, JSON.stringify(all))
+        if (userId) fsSet(userId, "budgets", all[index].id, all[index])
       }
     },
   },
+
   products: {
     getAll: (userId?: string): Product[] => {
       const keys = getKeys(userId)
@@ -580,6 +657,7 @@ export const storage = {
       all.push(product)
       const keys = getKeys(userId)
       localStorage.setItem(keys.products, JSON.stringify(all))
+      if (userId) fsSet(userId, "products", product.id, product)
     },
     update: (id: string, updates: Partial<Product>, userId?: string) => {
       const all = storage.products.getAll(userId)
@@ -588,6 +666,7 @@ export const storage = {
         all[index] = { ...all[index], ...updates }
         const keys = getKeys(userId)
         localStorage.setItem(keys.products, JSON.stringify(all))
+        if (userId) fsSet(userId, "products", all[index].id, all[index])
       }
     },
     delete: (id: string, userId?: string) => {
@@ -597,6 +676,7 @@ export const storage = {
         all[index].isActive = false
         const keys = getKeys(userId)
         localStorage.setItem(keys.products, JSON.stringify(all))
+        if (userId) fsSet(userId, "products", all[index].id, all[index])
       }
     },
     adjustStock: (id: string, delta: number, userId?: string) => {
@@ -606,9 +686,11 @@ export const storage = {
         all[index].stock = Math.max(0, all[index].stock + delta)
         const keys = getKeys(userId)
         localStorage.setItem(keys.products, JSON.stringify(all))
+        if (userId) fsSet(userId, "products", all[index].id, all[index])
       }
     },
   },
+
   sales: {
     getAll: (userId?: string): Sale[] => {
       const keys = getKeys(userId)
@@ -622,12 +704,14 @@ export const storage = {
       all.push(sale)
       const keys = getKeys(userId)
       localStorage.setItem(keys.sales, JSON.stringify(all))
+      if (userId) fsSet(userId, "sales", sale.id, sale)
       // Deduct stock for each item sold
       sale.items.forEach((item) => {
         storage.products.adjustStock(item.productId, -item.quantity, userId)
       })
     },
   },
+
   teamMembers: {
     getAll: (userId?: string): TeamMember[] => {
       const keys = getKeys(userId)
@@ -638,6 +722,7 @@ export const storage = {
       all.push(member)
       const keys = getKeys(userId)
       localStorage.setItem(keys.teamMembers, JSON.stringify(all))
+      if (userId) fsSet(userId, "teamMembers", member.id, member)
     },
     update: (id: string, updates: Partial<TeamMember>, userId?: string) => {
       const all = storage.teamMembers.getAll(userId)
@@ -646,9 +731,11 @@ export const storage = {
         all[index] = { ...all[index], ...updates }
         const keys = getKeys(userId)
         localStorage.setItem(keys.teamMembers, JSON.stringify(all))
+        if (userId) fsSet(userId, "teamMembers", all[index].id, all[index])
       }
     },
   },
+
   expenses: {
     getAll: (userId?: string): Expense[] => {
       const keys = getKeys(userId)
@@ -665,6 +752,7 @@ export const storage = {
       all.push(expense)
       const keys = getKeys(userId)
       localStorage.setItem(keys.expenses, JSON.stringify(all))
+      if (userId) fsSet(userId, "expenses", expense.id, expense)
     },
     update: (id: string, updates: Partial<Expense>, userId?: string) => {
       const all = storage.expenses.getAll(userId)
@@ -673,6 +761,7 @@ export const storage = {
         all[index] = { ...all[index], ...updates }
         const keys = getKeys(userId)
         localStorage.setItem(keys.expenses, JSON.stringify(all))
+        if (userId) fsSet(userId, "expenses", all[index].id, all[index])
       }
     },
     delete: (id: string, userId?: string) => {
@@ -680,8 +769,11 @@ export const storage = {
       const filtered = all.filter((e) => e.id !== id)
       const keys = getKeys(userId)
       localStorage.setItem(keys.expenses, JSON.stringify(filtered))
+      if (userId) fsDel(userId, "expenses", id)
     },
   },
+
+  // Device-level settings — stays in localStorage (not per-user cloud data)
   printSettings: {
     get: (): PrintSettings => {
       if (typeof window === "undefined") return { showCompanyName: true, showCompanyAddress: true, showTax: false, footerMessage: "Thank you for your business!" }

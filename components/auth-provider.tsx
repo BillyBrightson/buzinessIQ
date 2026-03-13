@@ -12,7 +12,7 @@ import {
     type User
 } from "firebase/auth"
 import { auth } from "@/lib/firebase"
-import { storage } from "@/lib/storage"
+import { storage, syncFromCloud } from "@/lib/storage"
 import { useRouter, usePathname } from "next/navigation"
 import { Loader2 } from "lucide-react"
 
@@ -34,7 +34,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const pathname = usePathname()
 
     useEffect(() => {
-        const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+        const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
+            if (currentUser) {
+                // Pull latest data from Firestore into localStorage before rendering pages
+                await syncFromCloud(currentUser.uid)
+            }
+
             setUser(currentUser)
             setLoading(false)
 

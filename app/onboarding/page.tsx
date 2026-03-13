@@ -40,20 +40,11 @@ export default function OnboardingPage() {
                 email: user.email || "",
                 phone: "",
                 role: "admin",
-                department: "Management",
-                jobTitle: "Owner",
-                startDate: new Date().toISOString(),
-                salary: 0,
-                status: "active",
                 isActive: true,
                 ghanaCardId: "",
                 hourlyRate: 0,
+                joinDate: new Date().toISOString().split("T")[0],
                 employmentType: "full-time",
-                bankAccount: { // Add required bank account field
-                    bankName: "",
-                    accountNumber: "",
-                    branch: ""
-                }
             }, user.uid)
 
             router.push("/dashboard")
