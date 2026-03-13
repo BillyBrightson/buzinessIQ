@@ -1,7 +1,10 @@
 "use client"
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Users, Briefcase, CheckCircle, Clock, TrendingUp } from "lucide-react"
+import { Users, Briefcase, CheckCircle, Clock, ShoppingCart, Wallet } from "lucide-react"
+
+const GHS = (n: number) =>
+    new Intl.NumberFormat("en-GH", { style: "currency", currency: "GHS" }).format(n)
 
 interface StatsCardsProps {
     stats: {
@@ -9,6 +12,8 @@ interface StatsCardsProps {
         activeProjects: number
         tasksInProgress: number
         completedTasks: number
+        todaySalesCount: number
+        todayRevenue: number
     }
 }
 
@@ -46,10 +51,26 @@ export function StatsCards({ stats }: StatsCardsProps) {
             className: "bg-gradient-to-br from-green-500/10 to-green-500/5 border-green-200 dark:border-green-800",
             iconColor: "text-green-600 dark:text-green-400",
         },
+        {
+            title: "Today's Sales",
+            value: stats.todaySalesCount,
+            description: "Transactions today",
+            icon: ShoppingCart,
+            className: "bg-gradient-to-br from-cyan-500/10 to-cyan-500/5 border-cyan-200 dark:border-cyan-800",
+            iconColor: "text-cyan-600 dark:text-cyan-400",
+        },
+        {
+            title: "Today's Revenue",
+            value: GHS(stats.todayRevenue),
+            description: "POS sales today",
+            icon: Wallet,
+            className: "bg-gradient-to-br from-emerald-500/10 to-emerald-500/5 border-emerald-200 dark:border-emerald-800",
+            iconColor: "text-emerald-600 dark:text-emerald-400",
+        },
     ]
 
     return (
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
             {cards.map((card, index) => (
                 <Card
                     key={card.title}
