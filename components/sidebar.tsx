@@ -2,7 +2,7 @@
 
 import Link from "next/link"
 import { useState, useEffect } from "react"
-import { Users, Calendar, DollarSign, LayoutGrid, Home, Menu, X, FileText, CreditCard, ChevronDown, ChevronRight, Calculator, Sparkles, ShoppingCart, Package, BarChart2 } from "lucide-react"
+import { Users, Calendar, DollarSign, LayoutGrid, Home, Menu, X, FileText, CreditCard, ChevronDown, ChevronRight, Calculator, ShoppingCart, BarChart2, Settings } from "lucide-react"
 import { ThemeToggle } from "@/components/theme-toggle"
 import { useAuth } from "@/components/auth-provider"
 import { storage } from "@/lib/storage"
@@ -15,7 +15,7 @@ interface SidebarProps {
 
 export function Sidebar({ currentPage, onSearchOpen }: SidebarProps) {
   const [isOpen, setIsOpen] = useState(false)
-  const { user } = useAuth()
+  const { user, can } = useAuth()
   const [companyName, setCompanyName] = useState("BuzinessIQ")
   const [expandedMenus, setExpandedMenus] = useState<string[]>([])
 
@@ -46,7 +46,7 @@ export function Sidebar({ currentPage, onSearchOpen }: SidebarProps) {
     )
   }
 
-  const menuItems = [
+  const allMenuItems = [
     { href: "/dashboard", label: "Dashboard", icon: Home },
     { href: "/employees", label: "Employees", icon: Users },
     { href: "/attendance", label: "Attendance", icon: Calendar },
@@ -84,7 +84,21 @@ export function Sidebar({ currentPage, onSearchOpen }: SidebarProps) {
         { href: "/pos/sales", label: "Sales History" },
       ]
     },
+    { href: "/settings", label: "Settings", icon: Settings },
   ]
+
+  // Filter nav items based on current user's role permissions
+  const menuItems = allMenuItems
+    .map(item => {
+      if (!can(item.href)) return null
+      if ("subItems" in item && item.subItems) {
+        const visibleSubs = item.subItems.filter(sub => can(sub.href))
+        if (visibleSubs.length === 0) return null
+        return { ...item, subItems: visibleSubs }
+      }
+      return item
+    })
+    .filter(Boolean) as typeof allMenuItems
 
   return (
     <>
@@ -168,25 +182,6 @@ export function Sidebar({ currentPage, onSearchOpen }: SidebarProps) {
           })}
         </nav>
 
-        <div className="absolute bottom-6 left-4 right-4 space-y-4">
-          {/* AI Search Button */}
-          <button
-            onClick={() => onSearchOpen?.()}
-            className="w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-700 hover:to-purple-700 text-white shadow-lg hover:shadow-xl transform hover:scale-[1.02] active:scale-[0.98]"
-          >
-            <Sparkles size={20} className="animate-pulse" />
-            <span className="font-medium">AI Search</span>
-            <kbd className="ml-auto px-2 py-1 text-xs rounded bg-white/20 border border-white/30">
-              ⌘K
-            </kbd>
-          </button>
-
-          <div className="p-4 bg-sidebar-accent/10 rounded-lg border border-sidebar-accent/20">
-            <p className="text-sm text-sidebar-foreground/70">
-              <strong>Tip:</strong> All data is saved locally in your browser.
-            </p>
-          </div>
-        </div>
       </aside>
 
       {isOpen && <div className="fixed inset-0 bg-black/50 z-30 md:hidden" onClick={() => setIsOpen(false)} />}
