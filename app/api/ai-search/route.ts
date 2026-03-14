@@ -1,7 +1,7 @@
 import { NextRequest } from "next/server"
 import { GoogleGenerativeAI } from "@google/generative-ai"
 
-const genAI = new GoogleGenerativeAI(process.env.GOOGLE_AI_API_KEY!)
+const genAI = new GoogleGenerativeAI(process.env.GOOGLE_AI_API_KEY ?? "")
 
 function buildSystemPrompt(context: Record<string, unknown>): string {
   const { role, accessiblePages, stats, today } = context as {
@@ -33,14 +33,25 @@ Your job:
 }
 
 export async function POST(req: NextRequest) {
+  if (!process.env.GOOGLE_AI_API_KEY) {
+    console.error("[AI Search] GOOGLE_AI_API_KEY is not set")
+    return new Response("AI service not configured", { status: 503 })
+  }
+
+  let body: { query: string; context: Record<string, unknown> }
   try {
-    const body = await req.json()
-    const { query, context } = body as { query: string; context: Record<string, unknown> }
+    body = await req.json()
+  } catch {
+    return new Response("Invalid JSON body", { status: 400 })
+  }
 
-    if (!query?.trim()) {
-      return new Response("Query is required", { status: 400 })
-    }
+  const { query, context } = body
 
+  if (!query?.trim()) {
+    return new Response("Query is required", { status: 400 })
+  }
+
+  try {
     const model = genAI.getGenerativeModel({
       model: "gemini-2.0-flash",
       systemInstruction: buildSystemPrompt(context),
@@ -56,7 +67,10 @@ export async function POST(req: NextRequest) {
             const text = chunk.text()
             if (text) controller.enqueue(encoder.encode(text))
           }
-        } finally {
+          controller.close()
+        } catch (streamErr) {
+          console.error("[AI Search] Stream error:", streamErr)
+          controller.enqueue(encoder.encode("Sorry, the response was interrupted. Please try again."))
           controller.close()
         }
       },
@@ -65,8 +79,20 @@ export async function POST(req: NextRequest) {
     return new Response(readable, {
       headers: { "Content-Type": "text/plain; charset=utf-8" },
     })
-  } catch (err) {
-    console.error("[AI Search] Error:", err)
-    return new Response("Failed to process query", { status: 500 })
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : String(err)
+    console.error("[AI Search] Error:", message)
+
+    // Send a 200 with error text so the client stream handler displays it
+    const encoder = new TextEncoder()
+    return new Response(
+      new ReadableStream({
+        start(controller) {
+          controller.enqueue(encoder.encode(`I ran into an issue: ${message}. Please try again.`))
+          controller.close()
+        },
+      }),
+      { headers: { "Content-Type": "text/plain; charset=utf-8" } }
+    )
   }
 }

@@ -5,7 +5,7 @@ import { useState, useEffect, useRef } from "react"
 import {
   Users, Calendar, DollarSign, LayoutGrid, Home, Menu, X,
   FileText, CreditCard, ChevronDown, ChevronRight, Calculator,
-  ShoppingCart, Settings, MapPin, ArrowLeftRight, Wallet, Sparkles
+  ShoppingCart, Settings, MapPin, ArrowLeftRight, Wallet
 } from "lucide-react"
 import { useAuth } from "@/components/auth-provider"
 import { storage } from "@/lib/storage"
@@ -256,17 +256,6 @@ export function Sidebar({ currentPage, onSearchOpen }: SidebarProps) {
           })}
         </nav>
 
-        {/* ── AI Search ── */}
-        <div className="px-3 pb-4 flex-shrink-0">
-          <button
-            onClick={() => onSearchOpen?.()}
-            className="w-full flex items-center gap-3 px-4 py-3 rounded-lg bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-700 hover:to-purple-700 text-white shadow-lg hover:shadow-xl transform hover:scale-[1.02] active:scale-[0.98] transition-all"
-          >
-            <Sparkles size={18} className="animate-pulse" />
-            <span className="font-medium text-sm">AI Search</span>
-            <kbd className="ml-auto px-1.5 py-0.5 text-[10px] rounded bg-white/20 border border-white/30">⌘K</kbd>
-          </button>
-        </div>
       </aside>
 
       {isOpen && <div className="fixed inset-0 bg-black/50 z-30 md:hidden" onClick={() => setIsOpen(false)} />}

@@ -3,7 +3,8 @@
 import { useState, useRef, useEffect, useCallback } from "react"
 import { Sparkles, X, Send, Loader2, ChevronDown } from "lucide-react"
 import { useAuth } from "@/components/auth-provider"
-import { storage } from "@/lib/storage"
+import { db } from "@/lib/firebase"
+import { collection, getDocs } from "firebase/firestore"
 import { FEATURE_PERMISSIONS } from "@/lib/rbac"
 import Link from "next/link"
 
@@ -13,9 +14,9 @@ interface Message {
   streaming?: boolean
 }
 
-// ─── Build RBAC-filtered context snapshot ──────────────────────────────────
+// ─── Build RBAC-filtered context snapshot (reads live from Firestore) ───────
 
-function buildContext(effectiveUid: string, role: string) {
+async function buildContext(effectiveUid: string, role: string) {
   const canAccess = (path: string) => {
     if (role === "admin") return true
     return FEATURE_PERMISSIONS.some(
@@ -27,10 +28,22 @@ function buildContext(effectiveUid: string, role: string) {
     .filter((f) => canAccess(f.path))
     .map((f) => `${f.label} (${f.path})`)
 
+  // Helper: fetch a Firestore sub-collection and return typed array
+  async function fetchCol<T>(col: string): Promise<T[]> {
+    try {
+      const snap = await getDocs(collection(db, "users", effectiveUid, col))
+      return snap.docs.map((d) => d.data() as T)
+    } catch {
+      return []
+    }
+  }
+
   const stats: Record<string, unknown> = {}
+  const today = new Date().toISOString().split("T")[0]
+  const monthKey = today.slice(0, 7) // "YYYY-MM"
 
   if (canAccess("/employees")) {
-    const employees = storage.employees.getAll(effectiveUid)
+    const employees = await fetchCol<{ isActive: boolean }>("employees")
     stats.employees = {
       total: employees.length,
       active: employees.filter((e) => e.isActive).length,
@@ -39,18 +52,20 @@ function buildContext(effectiveUid: string, role: string) {
   }
 
   if (canAccess("/attendance")) {
-    const today = new Date().toISOString().split("T")[0]
-    const todayAttendance = storage.attendance.getByDate(today, effectiveUid)
+    const attendance = await fetchCol<{ date: string; status: string }>("attendance")
+    const todayAtt = attendance.filter((a) => a.date === today)
     stats.attendance_today = {
-      present: todayAttendance.filter((a) => a.status === "present").length,
-      absent: todayAttendance.filter((a) => a.status === "absent").length,
-      on_leave: todayAttendance.filter((a) => a.status === "leave").length,
+      present: todayAtt.filter((a) => a.status === "present").length,
+      absent: todayAtt.filter((a) => a.status === "absent").length,
+      on_leave: todayAtt.filter((a) => a.status === "leave").length,
     }
   }
 
   if (canAccess("/projects")) {
-    const projects = storage.projects.getAll(effectiveUid)
-    const tasks = storage.tasks.getAll(effectiveUid)
+    const [projects, tasks] = await Promise.all([
+      fetchCol<{ status: string }>("projects"),
+      fetchCol<{ status: string }>("tasks"),
+    ])
     stats.projects = {
       total: projects.length,
       active: projects.filter((p) => p.status === "active").length,
@@ -65,36 +80,36 @@ function buildContext(effectiveUid: string, role: string) {
   }
 
   if (canAccess("/finance")) {
-    const invoices = storage.invoices.getAll(effectiveUid)
-    const payments = storage.payments.getAll(effectiveUid)
+    const [invoices, payments] = await Promise.all([
+      fetchCol<{ status: string; total: number }>("invoices"),
+      fetchCol<{ amount: number }>("payments"),
+    ])
     stats.invoices = {
       total: invoices.length,
       draft: invoices.filter((i) => i.status === "draft").length,
       sent: invoices.filter((i) => i.status === "sent").length,
       paid: invoices.filter((i) => i.status === "paid").length,
       overdue: invoices.filter((i) => i.status === "overdue").length,
-      total_value_GHS: invoices.reduce((s, i) => s + i.total, 0).toFixed(2),
+      total_value_GHS: invoices.reduce((s, i) => s + (i.total || 0), 0).toFixed(2),
     }
     stats.payments = {
       total: payments.length,
-      total_received_GHS: payments.reduce((s, p) => s + p.amount, 0).toFixed(2),
+      total_received_GHS: payments.reduce((s, p) => s + (p.amount || 0), 0).toFixed(2),
     }
   }
 
   if (canAccess("/accounting")) {
-    const now = new Date()
-    const monthKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`
-    const expenses = storage.expenses.getAll(effectiveUid)
-    const thisMonthExpenses = expenses.filter((e) => e.date.startsWith(monthKey))
+    const expenses = await fetchCol<{ date: string; amount: number }>("expenses")
+    const thisMonth = expenses.filter((e) => e.date?.startsWith(monthKey))
     stats.expenses = {
       total_records: expenses.length,
-      this_month_GHS: thisMonthExpenses.reduce((s, e) => s + e.amount, 0).toFixed(2),
-      this_month_count: thisMonthExpenses.length,
+      this_month_GHS: thisMonth.reduce((s, e) => s + (e.amount || 0), 0).toFixed(2),
+      this_month_count: thisMonth.length,
     }
   }
 
   if (canAccess("/payroll")) {
-    const payroll = storage.payroll.getAll(effectiveUid)
+    const payroll = await fetchCol<{ status: string }>("payroll")
     stats.payroll = {
       total_records: payroll.length,
       pending: payroll.filter((p) => p.status === "pending").length,
@@ -103,18 +118,20 @@ function buildContext(effectiveUid: string, role: string) {
   }
 
   if (canAccess("/pos")) {
-    const products = storage.products.getAll(effectiveUid)
-    const sales = storage.sales.getAll(effectiveUid)
-    const today = new Date().toISOString().split("T")[0]
+    const [products, sales] = await Promise.all([
+      fetchCol<{ isActive: boolean; stock: number; lowStockThreshold: number }>("products"),
+      fetchCol<{ date: string; total: number }>("sales"),
+    ])
+    const active = products.filter((p) => p.isActive)
     const todaySales = sales.filter((s) => s.date === today)
     stats.inventory = {
-      total_products: products.filter((p) => p.isActive).length,
-      low_stock: products.filter((p) => p.isActive && p.stock <= p.lowStockThreshold).length,
-      out_of_stock: products.filter((p) => p.isActive && p.stock === 0).length,
+      total_products: active.length,
+      low_stock: active.filter((p) => p.stock <= p.lowStockThreshold).length,
+      out_of_stock: active.filter((p) => p.stock === 0).length,
     }
     stats.sales = {
       today_count: todaySales.length,
-      today_revenue_GHS: todaySales.reduce((s, sale) => s + sale.total, 0).toFixed(2),
+      today_revenue_GHS: todaySales.reduce((s, sale) => s + (sale.total || 0), 0).toFixed(2),
       total_all_time: sales.length,
     }
   }
@@ -208,7 +225,7 @@ export function AISearchIsland() {
     abortRef.current = new AbortController()
 
     try {
-      const context = buildContext(effectiveUid || user.uid, userRole)
+      const context = await buildContext(effectiveUid || user.uid, userRole)
 
       const res = await fetch("/api/ai-search", {
         method: "POST",
@@ -284,7 +301,7 @@ export function AISearchIsland() {
   ]
 
   return (
-    <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 flex flex-col items-center">
+    <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 flex flex-col items-center pointer-events-none">
       {/* Chat panel — appears above the island when open */}
       <div
         className={`transition-all duration-300 ease-in-out w-[420px] max-w-[calc(100vw-2rem)] mb-3 ${
@@ -400,7 +417,7 @@ export function AISearchIsland() {
       <button
         onClick={() => setIsOpen((v) => !v)}
         className={`
-          flex items-center gap-2.5 px-5 py-3 rounded-full transition-all duration-300
+          pointer-events-auto flex items-center gap-2.5 px-5 py-3 rounded-full transition-all duration-300
           border shadow-2xl
           ${isOpen
             ? "bg-zinc-900 border-violet-500/40 text-white shadow-violet-500/20 pr-4"
