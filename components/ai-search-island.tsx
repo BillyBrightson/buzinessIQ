@@ -220,7 +220,8 @@ export function AISearchIsland() {
 
   const { user, effectiveUid, userRole } = useAuth()
   const pathname = usePathname()
-  const isHomepage = pathname === "/"
+  // All public marketing pages use general mode (no company data, bottom-right position)
+  const isPublicPage = pathname === "/" || pathname.startsWith("/features")
   const [isOpen, setIsOpen] = useState(false)
   const [input, setInput] = useState("")
   const [messages, setMessages] = useState<Message[]>([])
@@ -271,7 +272,7 @@ export function AISearchIsland() {
   const sendMessage = useCallback(async () => {
     if (!input.trim() || isLoading) return
     // On homepage, allow general questions without login; inside app, require login
-    if (!isHomepage && !user) return
+    if (!isPublicPage && !user) return
 
     const userMsg = input.trim()
     setInput("")
@@ -286,7 +287,7 @@ export function AISearchIsland() {
     try {
       // Homepage (or logged-out): send general mode with no company data
       // App pages (logged in): send full RBAC-filtered context
-      const context = (isHomepage || !user)
+      const context = (isPublicPage || !user)
         ? {
             mode: "general",
             today: new Date().toLocaleDateString("en-GH", { weekday: "long", year: "numeric", month: "long", day: "numeric" }),
@@ -349,7 +350,7 @@ export function AISearchIsland() {
     } finally {
       setIsLoading(false)
     }
-  }, [input, isLoading, user, effectiveUid, userRole, isHomepage])
+  }, [input, isLoading, user, effectiveUid, userRole, isPublicPage])
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === "Enter" && !e.shiftKey) {
@@ -359,7 +360,7 @@ export function AISearchIsland() {
   }
 
   // Suggestions change based on context
-  const suggestions = isHomepage
+  const suggestions = isPublicPage
     ? [
         "How do I manage employee payroll?",
         "What is BuzinessIQ?",
@@ -374,7 +375,7 @@ export function AISearchIsland() {
       ]
 
   return (
-    <div className={`fixed bottom-6 z-50 flex flex-col pointer-events-none ${isHomepage ? "right-6 items-end" : "left-1/2 -translate-x-1/2 items-center"}`}>
+    <div className={`fixed bottom-6 z-50 flex flex-col pointer-events-none ${isPublicPage ? "right-6 items-end" : "left-1/2 -translate-x-1/2 items-center"}`}>
       {/* Chat panel — appears above the island when open */}
       <div
         className={`transition-all duration-300 ease-in-out w-[420px] max-w-[calc(100vw-2rem)] mb-3 ${
