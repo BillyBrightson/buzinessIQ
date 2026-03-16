@@ -14,36 +14,42 @@ export default function Home() {
       title: "Employee Management",
       description: "Streamline your workforce with comprehensive employee tracking, attendance, and payroll management",
       image: "/1.Employee Management.png",
+      slug: "/features/employee-management",
     },
     {
       icon: BarChart3,
       title: "Real-time Analytics",
       description: "Make data-driven decisions with powerful insights and reporting tools across your entire business",
       image: "/2.Financial Analysis.png",
+      slug: "/features/analytics",
     },
     {
       icon: TrendingUp,
       title: "Finance & Invoicing",
       description: "Track payments, manage invoices, and stay on top of your cash flow with ease",
       image: "/Invoicing.png",
+      slug: "/features/finance-invoicing",
     },
     {
       icon: ShoppingCart,
       title: "Point of Sale",
       description: "Sell faster with a built-in POS terminal, real-time inventory, stock transfers between branches, and instant thermal receipts",
       image: "/3.POS.png",
+      slug: "/features/point-of-sale",
     },
     {
       icon: Zap,
       title: "Multi-Branch Ready",
       description: "Manage multiple shop locations, transfer stock between branches, and track performance per branch",
       image: "/4.Project Tracking.png",
+      slug: "/features/multi-branch",
     },
     {
       icon: Shield,
       title: "Secure & Reliable",
       description: "Enterprise-grade security with cloud sync and local data storage for complete control",
       image: "/5.Secre and Reliable.png",
+      slug: "/features/security",
     },
   ]
 
@@ -239,9 +245,9 @@ export default function Home() {
                         {feature.description}
                       </p>
                       <div className="mt-auto pt-3">
-                        <span className={`inline-flex items-center gap-1 text-sm font-medium group-hover:gap-2 transition-all ${isFeatured ? "text-white" : "text-primary"}`}>
+                        <Link href={feature.slug} className={`inline-flex items-center gap-1 text-sm font-medium group-hover:gap-2 transition-all ${isFeatured ? "text-white" : "text-primary"}`}>
                           Learn more <ArrowRight className="h-3.5 w-3.5" />
-                        </span>
+                        </Link>
                       </div>
                     </div>
                   </div>
