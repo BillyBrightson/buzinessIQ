@@ -125,6 +125,29 @@
   }
 }
 
+/* ── Print / Thermal Receipt ── */
+@media print {
+  @page {
+    size: 80mm auto;
+    margin: 3mm;
+  }
+
+  .no-print {
+    display: none !important;
+  }
+
+  #receipt-print-area {
+    display: block !important;
+    width: 74mm !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  body > *:not(#receipt-print-area) {
+    display: none !important;
+  }
+}
+
 /* Landing Page Utilities */
 @layer utilities {
   .bg-grid-pattern {

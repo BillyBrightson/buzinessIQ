@@ -90,7 +90,7 @@ export default function CashDrawerPage({ onSearchOpen }: { onSearchOpen?: () => 
       closingFloat: float,
       totalSales: todaySales,
       variance,
-      notes: closeNotes || undefined,
+      notes: closeNotes || null,
       status: "closed",
       closedBy: user?.displayName || user?.email || "Admin",
     }, uid)

@@ -75,6 +75,43 @@ useEffect(() => {
 
 ---
 
+## Step 7 — Update BuzinessIQ AI context ⚠️ REQUIRED
+
+Every new feature with queryable data MUST be added to `buildContext()` in [components/ai-search-island.tsx](components/ai-search-island.tsx) so the AI can answer questions about it.
+
+Ask yourself:
+- Does this feature have data the user might ask the AI about? (e.g. "how many X?", "what is the price of Y?", "show me Z from today")
+- If YES → add a `fetchCol<Type>("collectionName")` block inside the relevant `canAccess()` guard
+
+Pattern:
+```typescript
+if (canAccess("/your/route")) {
+  const items = await fetchCol<{ field: type }>("firestoreCollection")
+  stats.your_feature = {
+    total: items.length,
+    // ...relevant aggregates and lists
+  }
+}
+```
+
+The AI reads the entire `stats` object — the more detail you include (names, prices, counts, dates), the more accurately it can answer user questions.
+
+---
+
+## Step 8 — Update suggestions in AI island (optional)
+
+If the feature introduces common queries users will ask, add example prompts to the `suggestions` array in [components/ai-search-island.tsx](components/ai-search-island.tsx):
+
+```typescript
+const suggestions = [
+  "How many sales today?",
+  "What is the price of [your product]?",  // ← add relevant examples
+  ...
+]
+```
+
+---
+
 ## Reminder: Roles summary
 
 | Role | Default access |

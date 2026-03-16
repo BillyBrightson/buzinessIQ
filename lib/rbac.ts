@@ -12,6 +12,7 @@ export interface FeaturePermission {
 export const FEATURE_PERMISSIONS: FeaturePermission[] = [
   // Core
   { id: "dashboard", label: "Dashboard", description: "View business overview and key metrics", path: "/dashboard", category: "Core", roles: ["admin", "store_keeper", "accountant"] },
+  { id: "ai_search", label: "BuzinessIQ AI", description: "Ask natural language questions about your business using AI", path: "/ai-search", category: "Core", roles: ["admin", "store_keeper", "accountant"] },
   // HR & People
   { id: "employees", label: "Employees", description: "Manage employee records and profiles", path: "/employees", category: "HR & People", roles: ["admin"] },
   { id: "attendance", label: "Attendance", description: "Track and record daily attendance", path: "/attendance", category: "HR & People", roles: ["admin"] },

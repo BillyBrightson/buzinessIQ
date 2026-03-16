@@ -1,7 +1,7 @@
 import { NextRequest } from "next/server"
-import { GoogleGenerativeAI } from "@google/generative-ai"
+import Groq from "groq-sdk"
 
-const genAI = new GoogleGenerativeAI(process.env.GOOGLE_AI_API_KEY ?? "")
+const groq = new Groq({ apiKey: process.env.GROQ_API_KEY ?? "" })
 
 function buildSystemPrompt(context: Record<string, unknown>): string {
   const { role, accessiblePages, stats, today } = context as {
@@ -33,8 +33,8 @@ Your job:
 }
 
 export async function POST(req: NextRequest) {
-  if (!process.env.GOOGLE_AI_API_KEY) {
-    console.error("[AI Search] GOOGLE_AI_API_KEY is not set")
+  if (!process.env.GROQ_API_KEY) {
+    console.error("[AI Search] GROQ_API_KEY is not set")
     return new Response("AI service not configured", { status: 503 })
   }
 
@@ -52,19 +52,23 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    const model = genAI.getGenerativeModel({
-      model: "gemini-2.0-flash",
-      systemInstruction: buildSystemPrompt(context),
+    const stream = await groq.chat.completions.create({
+      model: "llama-3.1-8b-instant",
+      messages: [
+        { role: "system", content: buildSystemPrompt(context) },
+        { role: "user", content: query },
+      ],
+      stream: true,
+      max_tokens: 512,
+      temperature: 0.5,
     })
-
-    const result = await model.generateContentStream(query)
 
     const encoder = new TextEncoder()
     const readable = new ReadableStream({
       async start(controller) {
         try {
-          for await (const chunk of result.stream) {
-            const text = chunk.text()
+          for await (const chunk of stream) {
+            const text = chunk.choices[0]?.delta?.content ?? ""
             if (text) controller.enqueue(encoder.encode(text))
           }
           controller.close()
@@ -83,7 +87,6 @@ export async function POST(req: NextRequest) {
     const message = err instanceof Error ? err.message : String(err)
     console.error("[AI Search] Error:", message)
 
-    // Send a 200 with error text so the client stream handler displays it
     const encoder = new TextEncoder()
     return new Response(
       new ReadableStream({

@@ -2,12 +2,15 @@
 
 import React from "react"
 import { AISearchIsland } from "@/components/ai-search-island"
+import { useAuth } from "@/components/auth-provider"
 
 export function SearchProvider({ children }: { children: React.ReactNode }) {
+  const { can } = useAuth()
+
   return (
     <>
       {children}
-      <AISearchIsland />
+      {can("/ai-search") && <AISearchIsland />}
     </>
   )
 }

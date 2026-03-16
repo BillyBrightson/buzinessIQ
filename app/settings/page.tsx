@@ -9,7 +9,7 @@ import { FEATURE_PERMISSIONS, ROLE_LABELS, ROLE_DESCRIPTIONS, ROLE_COLORS, getPe
 import type { AppRole, RoleAssignment, Branch } from "@/lib/types"
 import {
     Loader2, Save, Building, User as UserIcon, Shield, Plus,
-    CheckCircle2, XCircle, Eye, EyeOff, RotateCcw, MapPin, Pencil, AlertCircle
+    CheckCircle2, XCircle, Eye, EyeOff, RotateCcw, MapPin, Pencil, AlertCircle, Sparkles
 } from "lucide-react"
 import { initializeApp, getApps } from "firebase/app"
 import { getAuth, createUserWithEmailAndPassword } from "firebase/auth"
@@ -57,6 +57,9 @@ export default function SettingsPage({ onSearchOpen }: { onSearchOpen?: () => vo
     // Local copy of overrides for editing
     const [localOverrides, setLocalOverrides] = useState<Record<string, string[]>>({})
 
+    // AI Hotkey
+    const [aiHotkey, setAiHotkeyState] = useState("k")
+
     // Branches state
     const MAX_BRANCHES = 3
     const [branches, setBranches] = useState<Branch[]>([])
@@ -79,6 +82,7 @@ export default function SettingsPage({ onSearchOpen }: { onSearchOpen?: () => vo
             setRoleAssignments(storage.roleAssignments.getByAdmin(user.uid))
             setBranches(storage.branches.getAll(user.uid))
         }
+        setAiHotkeyState(storage.aiHotkey.get())
     }, [user, effectiveUid])
 
     // Sync auth context overrides into local edit state
@@ -309,32 +313,79 @@ export default function SettingsPage({ onSearchOpen }: { onSearchOpen?: () => vo
 
                     {/* ── User Profile ── */}
                     {activeTab === "profile" && (
-                        <div className="bg-card rounded-xl border border-border p-6 shadow-sm max-w-lg">
-                            <div className="flex items-center gap-3 mb-6">
-                                <div className="p-2 bg-primary/10 rounded-lg text-primary"><UserIcon size={22} /></div>
+                        <div className="space-y-6 max-w-lg">
+                            <div className="bg-card rounded-xl border border-border p-6 shadow-sm">
+                                <div className="flex items-center gap-3 mb-6">
+                                    <div className="p-2 bg-primary/10 rounded-lg text-primary"><UserIcon size={22} /></div>
+                                    <div>
+                                        <h2 className="text-lg font-semibold">User Profile</h2>
+                                        <p className="text-sm text-muted-foreground">Manage your personal account</p>
+                                    </div>
+                                </div>
+                                <form onSubmit={handleSaveProfile} className="space-y-4">
+                                    <div>
+                                        <label className="block text-sm font-medium mb-1">Full Name</label>
+                                        <input type="text" value={userName} onChange={e => setUserName(e.target.value)}
+                                            className="w-full px-3 py-2 rounded-lg border border-input bg-background focus:ring-2 focus:ring-primary focus:outline-none" />
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-medium mb-1">Email Address</label>
+                                        <input type="email" value={userEmail} disabled
+                                            className="w-full px-3 py-2 rounded-lg border border-input bg-muted text-muted-foreground cursor-not-allowed" />
+                                        <p className="text-xs text-muted-foreground mt-1">Email cannot be changed here</p>
+                                    </div>
+                                    <button type="submit" disabled={isLoading}
+                                        className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors disabled:opacity-50">
+                                        {isLoading ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}
+                                        Save Profile
+                                    </button>
+                                </form>
+                            </div>
+
+                            {/* AI Hotkey */}
+                            <div className="bg-card rounded-xl border border-border p-6 shadow-sm">
+                                <div className="flex items-center gap-3 mb-5">
+                                    <div className="p-2 bg-primary/10 rounded-lg text-primary"><Sparkles size={22} /></div>
+                                    <div>
+                                        <h2 className="text-lg font-semibold">BuzinessIQ AI Shortcut</h2>
+                                        <p className="text-sm text-muted-foreground">Choose which key opens the AI assistant</p>
+                                    </div>
+                                </div>
+
+                                <div className="flex items-center gap-3 mb-4">
+                                    <div className="flex items-center gap-2 px-4 py-2.5 bg-muted rounded-xl border border-border">
+                                        <kbd className="text-sm font-mono font-semibold text-foreground">⌘ / Ctrl</kbd>
+                                        <span className="text-muted-foreground">+</span>
+                                        <kbd className="text-sm font-mono font-bold text-primary uppercase">{aiHotkey}</kbd>
+                                    </div>
+                                    <span className="text-sm text-muted-foreground">current shortcut</span>
+                                </div>
+
                                 <div>
-                                    <h2 className="text-lg font-semibold">User Profile</h2>
-                                    <p className="text-sm text-muted-foreground">Manage your personal account</p>
+                                    <label className="block text-xs font-medium text-muted-foreground mb-2">Select key</label>
+                                    <div className="flex flex-wrap gap-2">
+                                        {["k", "j", "i", "m", "q", "e", "/"].map((key) => (
+                                            <button
+                                                key={key}
+                                                onClick={() => {
+                                                    setAiHotkeyState(key)
+                                                    storage.aiHotkey.set(key)
+                                                    // Trigger storage event so ai-search-island picks it up in same tab
+                                                    window.dispatchEvent(new StorageEvent("storage", { key: "crm_aiHotkey", newValue: key }))
+                                                    showSuccess(`Shortcut updated to ⌘${key.toUpperCase()}`)
+                                                }}
+                                                className={`w-10 h-10 rounded-lg border text-sm font-mono font-semibold transition-all ${aiHotkey === key
+                                                    ? "bg-primary text-primary-foreground border-primary"
+                                                    : "bg-background border-input hover:border-primary/50 text-foreground"
+                                                    }`}
+                                            >
+                                                {key.toUpperCase()}
+                                            </button>
+                                        ))}
+                                    </div>
+                                    <p className="text-xs text-muted-foreground mt-2">Changes take effect immediately — no restart needed</p>
                                 </div>
                             </div>
-                            <form onSubmit={handleSaveProfile} className="space-y-4">
-                                <div>
-                                    <label className="block text-sm font-medium mb-1">Full Name</label>
-                                    <input type="text" value={userName} onChange={e => setUserName(e.target.value)}
-                                        className="w-full px-3 py-2 rounded-lg border border-input bg-background focus:ring-2 focus:ring-primary focus:outline-none" />
-                                </div>
-                                <div>
-                                    <label className="block text-sm font-medium mb-1">Email Address</label>
-                                    <input type="email" value={userEmail} disabled
-                                        className="w-full px-3 py-2 rounded-lg border border-input bg-muted text-muted-foreground cursor-not-allowed" />
-                                    <p className="text-xs text-muted-foreground mt-1">Email cannot be changed here</p>
-                                </div>
-                                <button type="submit" disabled={isLoading}
-                                    className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors disabled:opacity-50">
-                                    {isLoading ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}
-                                    Save Profile
-                                </button>
-                            </form>
                         </div>
                     )}
 
