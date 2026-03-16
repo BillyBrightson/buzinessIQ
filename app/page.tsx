@@ -174,50 +174,80 @@ export default function Home() {
 
         {/* Features Section */}
         <div className="max-w-7xl mx-auto px-6 pb-32">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {features.map((feature, index) => {
-              const Icon = feature.icon
-              return (
-                <div
-                  key={feature.title}
-                  className="group relative overflow-hidden rounded-2xl border border-black/[0.07] dark:border-white/[0.08] bg-white/70 dark:bg-white/[0.04] backdrop-blur-2xl shadow-lg shadow-black/[0.06] dark:shadow-black/40 hover:shadow-2xl hover:shadow-primary/10 hover:-translate-y-1.5 hover:border-primary/30 transition-all duration-500"
-                  style={{ animationDelay: `${index * 100}ms` }}
-                >
-                  {/* Background screenshot — sits behind everything */}
-                  {feature.image ? (
-                    <div
-                      className="absolute inset-0 bg-cover bg-top bg-no-repeat opacity-30 dark:opacity-20 group-hover:opacity-45 dark:group-hover:opacity-30 scale-[1.06] group-hover:scale-100 transition-all duration-700 ease-out"
-                      style={{ backgroundImage: `url('${feature.image}')` }}
-                    />
-                  ) : (
-                    /* Finance card: abstract gradient stand-in */
-                    <div className="absolute inset-0 bg-gradient-to-br from-primary/10 via-emerald-500/5 to-primary/5 opacity-60 group-hover:opacity-100 transition-opacity duration-500" />
-                  )}
+          <div className="rounded-3xl bg-zinc-900 dark:bg-zinc-950 p-8 md:p-12">
 
-                  {/* Frosted glass scrim — transparent at top (image shows), fades to ~80% at bottom (text readable) */}
-                  <div className="absolute inset-0 bg-gradient-to-b from-transparent via-white/20 dark:via-black/10 to-white/80 dark:to-black/75" />
+            {/* Section header */}
+            <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-10">
+              <div>
+                <p className="flex items-center gap-2 text-sm font-semibold text-primary mb-3">
+                  <span className="w-2 h-2 rounded-full bg-primary inline-block" />
+                  Our Features
+                </p>
+                <h2 className="text-3xl md:text-4xl font-bold text-white leading-tight">
+                  Everything your business<br className="hidden sm:block" /> needs in one place
+                </h2>
+              </div>
+              <Link href="/signup">
+                <button className="flex items-center gap-2 px-5 py-2.5 rounded-full border border-white/15 text-white/70 hover:text-white hover:border-white/30 text-sm font-medium transition-all whitespace-nowrap">
+                  Get started <ArrowRight className="h-4 w-4" />
+                </button>
+              </Link>
+            </div>
 
-                  {/* Subtle colour tint from primary */}
-                  <div className="absolute inset-0 bg-gradient-to-br from-primary/[0.04] via-transparent to-transparent" />
+            {/* Cards grid */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {features.map((feature, index) => {
+                const Icon = feature.icon
+                const isFeatured = index === 3 // Point of Sale highlighted
 
-                  {/* Card content */}
-                  <div className="relative z-10 p-8 space-y-4">
-                    <div className="w-12 h-12 rounded-xl bg-primary/10 dark:bg-primary/20 border border-primary/15 dark:border-primary/25 backdrop-blur-sm flex items-center justify-center group-hover:bg-primary/20 dark:group-hover:bg-primary/30 group-hover:scale-110 transition-all duration-300 shadow-sm shadow-primary/10">
-                      <Icon className="h-6 w-6 text-primary" />
+                return (
+                  <div
+                    key={feature.title}
+                    className={`group relative overflow-hidden rounded-2xl flex flex-col transition-all duration-300 hover:-translate-y-1 hover:shadow-2xl ${
+                      isFeatured
+                        ? "bg-primary shadow-xl shadow-primary/30"
+                        : "bg-zinc-800/70 hover:bg-zinc-800"
+                    }`}
+                    style={{ animationDelay: `${index * 100}ms` }}
+                  >
+                    {/* Image — top portion of card */}
+                    <div className="h-44 overflow-hidden flex-shrink-0">
+                      {feature.image ? (
+                        <img
+                          src={feature.image}
+                          alt={feature.title}
+                          className="w-full h-full object-cover object-top group-hover:scale-105 transition-transform duration-500"
+                        />
+                      ) : (
+                        <div className={`w-full h-full flex items-center justify-center ${isFeatured ? "bg-primary/80" : "bg-zinc-700/50"}`}>
+                          <Icon className="h-12 w-12 text-white/20" />
+                        </div>
+                      )}
                     </div>
-                    <h3 className="text-xl font-semibold text-foreground">
-                      {feature.title}
-                    </h3>
-                    <p className="text-muted-foreground leading-relaxed">
-                      {feature.description}
-                    </p>
-                  </div>
 
-                  {/* Top-edge glass highlight */}
-                  <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/60 dark:via-white/15 to-transparent" />
-                </div>
-              )
-            })}
+                    {/* Text content */}
+                    <div className="p-6 flex flex-col gap-2 flex-1">
+                      <div className="flex items-center gap-2">
+                        <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${isFeatured ? "bg-white/20" : "bg-primary/15"}`}>
+                          <Icon className={`h-4 w-4 ${isFeatured ? "text-white" : "text-primary"}`} />
+                        </div>
+                      </div>
+                      <h3 className={`text-lg font-bold mt-1 ${isFeatured ? "text-white" : "text-white"}`}>
+                        {feature.title}
+                      </h3>
+                      <p className={`text-sm leading-relaxed ${isFeatured ? "text-white/75" : "text-white/50"}`}>
+                        {feature.description}
+                      </p>
+                      <div className="mt-auto pt-3">
+                        <span className={`inline-flex items-center gap-1 text-sm font-medium group-hover:gap-2 transition-all ${isFeatured ? "text-white" : "text-primary"}`}>
+                          Learn more <ArrowRight className="h-3.5 w-3.5" />
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
           </div>
         </div>
 
