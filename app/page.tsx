@@ -180,38 +180,41 @@ export default function Home() {
               return (
                 <div
                   key={feature.title}
-                  className="group relative overflow-hidden rounded-2xl border border-white/10 bg-white/[0.04] backdrop-blur-xl hover:border-primary/40 transition-all duration-500 hover:shadow-2xl hover:shadow-primary/15 hover:-translate-y-1.5"
+                  className="group relative overflow-hidden rounded-2xl border border-black/[0.07] dark:border-white/[0.08] bg-white/70 dark:bg-white/[0.04] backdrop-blur-2xl shadow-lg shadow-black/[0.06] dark:shadow-black/40 hover:shadow-2xl hover:shadow-primary/10 hover:-translate-y-1.5 hover:border-primary/30 transition-all duration-500"
                   style={{ animationDelay: `${index * 100}ms` }}
                 >
-                  {/* Background screenshot */}
-                  {feature.image && (
-                    <>
-                      <div
-                        className="absolute inset-0 bg-cover bg-center bg-no-repeat opacity-[0.13] group-hover:opacity-[0.22] transition-opacity duration-500 scale-[1.08] group-hover:scale-100"
-                        style={{ backgroundImage: `url('${feature.image}')`, transitionProperty: "opacity, transform" }}
-                      />
-                      {/* Gradient wash — keeps text readable */}
-                      <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-black/10" />
-                      {/* Frosted glass sheen */}
-                      <div className="absolute inset-0 bg-gradient-to-br from-white/[0.06] via-transparent to-primary/[0.04]" />
-                    </>
+                  {/* Background screenshot — sits behind everything */}
+                  {feature.image ? (
+                    <div
+                      className="absolute inset-0 bg-cover bg-top bg-no-repeat opacity-30 dark:opacity-20 group-hover:opacity-45 dark:group-hover:opacity-30 scale-[1.06] group-hover:scale-100 transition-all duration-700 ease-out"
+                      style={{ backgroundImage: `url('${feature.image}')` }}
+                    />
+                  ) : (
+                    /* Finance card: abstract gradient stand-in */
+                    <div className="absolute inset-0 bg-gradient-to-br from-primary/10 via-emerald-500/5 to-primary/5 opacity-60 group-hover:opacity-100 transition-opacity duration-500" />
                   )}
+
+                  {/* Frosted glass scrim — fades image edges, keeps text clear */}
+                  <div className="absolute inset-0 bg-gradient-to-t from-white/95 dark:from-black/85 via-white/50 dark:via-black/30 to-white/10 dark:to-transparent" />
+
+                  {/* Subtle colour tint from primary */}
+                  <div className="absolute inset-0 bg-gradient-to-br from-primary/[0.04] via-transparent to-transparent" />
 
                   {/* Card content */}
                   <div className="relative z-10 p-8 space-y-4">
-                    <div className="w-12 h-12 rounded-xl bg-primary/20 backdrop-blur-sm border border-primary/20 flex items-center justify-center group-hover:bg-primary/30 transition-all duration-300 group-hover:scale-110 shadow-lg shadow-primary/10">
+                    <div className="w-12 h-12 rounded-xl bg-primary/10 dark:bg-primary/20 border border-primary/15 dark:border-primary/25 backdrop-blur-sm flex items-center justify-center group-hover:bg-primary/20 dark:group-hover:bg-primary/30 group-hover:scale-110 transition-all duration-300 shadow-sm shadow-primary/10">
                       <Icon className="h-6 w-6 text-primary" />
                     </div>
-                    <h3 className="text-xl font-semibold text-white/90 group-hover:text-white transition-colors">
+                    <h3 className="text-xl font-semibold text-foreground">
                       {feature.title}
                     </h3>
-                    <p className="text-white/50 group-hover:text-white/65 leading-relaxed transition-colors">
+                    <p className="text-muted-foreground leading-relaxed">
                       {feature.description}
                     </p>
                   </div>
 
-                  {/* Subtle inner border highlight (top edge) */}
-                  <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/20 to-transparent" />
+                  {/* Top-edge glass highlight */}
+                  <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/60 dark:via-white/15 to-transparent" />
                 </div>
               )
             })}
