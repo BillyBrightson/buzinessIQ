@@ -134,7 +134,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                 setCurrentBranch(null)
                 setCurrentBranchIdState("")
 
-                if (pathname !== "/login" && pathname !== "/signup" && pathname !== "/") {
+                const publicPaths = ["/login", "/signup", "/"]
+                const isPublic = publicPaths.includes(pathname) || pathname.startsWith("/features")
+                if (!isPublic) {
                     router.push("/login")
                 }
             }
