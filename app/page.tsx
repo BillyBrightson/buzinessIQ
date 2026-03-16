@@ -2,7 +2,7 @@
 
 import Link from "next/link"
 import { useAuth } from "@/components/auth-provider"
-import { ArrowRight, Building2, Users, TrendingUp, Shield, Zap, BarChart3 } from "lucide-react"
+import { ArrowRight, Briefcase, Users, TrendingUp, Shield, Zap, BarChart3, ShoppingCart } from "lucide-react"
 import { ThemeToggle } from "@/components/theme-toggle"
 
 export default function Home() {
@@ -12,42 +12,42 @@ export default function Home() {
     {
       icon: Users,
       title: "Employee Management",
-      description: "Streamline your workforce with comprehensive employee tracking and management"
+      description: "Streamline your workforce with comprehensive employee tracking, attendance, and payroll management"
     },
     {
       icon: BarChart3,
       title: "Real-time Analytics",
-      description: "Make data-driven decisions with powerful insights and reporting tools"
+      description: "Make data-driven decisions with powerful insights and reporting tools across your entire business"
     },
     {
       icon: TrendingUp,
-      title: "Project Tracking",
-      description: "Monitor project progress, deadlines, and resource allocation effortlessly"
+      title: "Finance & Invoicing",
+      description: "Track payments, manage invoices, and stay on top of your cash flow with ease"
+    },
+    {
+      icon: ShoppingCart,
+      title: "Point of Sale",
+      description: "Sell faster with a built-in POS terminal, real-time inventory, stock transfers between branches, and instant thermal receipts"
+    },
+    {
+      icon: Zap,
+      title: "Multi-Branch Ready",
+      description: "Manage multiple shop locations, transfer stock between branches, and track performance per branch"
     },
     {
       icon: Shield,
       title: "Secure & Reliable",
-      description: "Enterprise-grade security with local data storage for complete control"
+      description: "Enterprise-grade security with cloud sync and local data storage for complete control"
     },
-    {
-      icon: Zap,
-      title: "Lightning Fast",
-      description: "Optimized performance for seamless workflow and productivity"
-    },
-    {
-      icon: Building2,
-      title: "Built for Construction",
-      description: "Tailored specifically for construction and project-based businesses"
-    }
   ]
 
-  const trustedCompanies = [
-    "BuildCorp",
-    "ConstructPro",
-    "SteelWorks Inc",
-    "Urban Developers",
-    "Premier Builders",
-    "Skyline Construction"
+  const businessCategories = [
+    "Retail Shops",
+    "Pharmacies",
+    "Restaurants",
+    "Wholesale Stores",
+    "Fashion & Boutiques",
+    "Logistics & Distribution",
   ]
 
   return (
@@ -65,12 +65,12 @@ export default function Home() {
         <div className="max-w-7xl mx-auto px-6 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <Building2 className="h-8 w-8 text-primary" />
+              <Briefcase className="h-8 w-8 text-primary" />
               <div>
                 <h1 className="text-2xl font-bold bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent">
                   BuzinessIQ
                 </h1>
-                <p className="text-xs text-muted-foreground">Construction Management</p>
+                <p className="text-xs text-muted-foreground">Business Management</p>
               </div>
             </div>
             <div className="flex items-center gap-4">
@@ -108,15 +108,15 @@ export default function Home() {
             <div className="space-y-6">
               <h2 className="text-6xl md:text-7xl lg:text-8xl font-bold leading-tight">
                 <span className="bg-gradient-to-r from-foreground via-foreground/90 to-foreground/70 bg-clip-text text-transparent">
-                  The enterprise platform
+                  The all-in-one platform
                 </span>
                 <br />
                 <span className="bg-gradient-to-r from-primary via-emerald-500 to-primary bg-clip-text text-transparent animate-gradient">
-                  for construction
+                  for Ghanaian businesses
                 </span>
               </h2>
               <p className="text-xl md:text-2xl text-muted-foreground max-w-3xl mx-auto leading-relaxed">
-                Streamline operations, boost productivity, and drive growth with our comprehensive construction management solution
+                Manage your team, track sales, handle invoices, and run multiple branches — all from one intelligent platform built for Ghanaian businesses.
               </p>
             </div>
 
@@ -139,7 +139,7 @@ export default function Home() {
                   </Link>
                   <Link href="/login">
                     <button className="px-8 py-4 bg-card border border-border text-foreground rounded-full font-semibold text-lg hover:bg-accent transition-all hover:scale-105 shadow-xl">
-                      View Demo
+                      Sign In
                     </button>
                   </Link>
                 </>
@@ -149,18 +149,16 @@ export default function Home() {
             {/* Trust Badge */}
             <div className="pt-12 space-y-6">
               <p className="text-sm font-medium text-muted-foreground uppercase tracking-wider">
-                Trusted by construction leaders
+                Trusted across industries in Ghana
               </p>
               <div className="flex flex-wrap items-center justify-center gap-8 md:gap-12 opacity-60">
-                {trustedCompanies.map((company, index) => (
+                {businessCategories.map((category, index) => (
                   <div
-                    key={company}
+                    key={category}
                     className="text-lg font-semibold text-foreground/70 hover:text-foreground transition-colors"
-                    style={{
-                      animationDelay: `${index * 100}ms`
-                    }}
+                    style={{ animationDelay: `${index * 100}ms` }}
                   >
-                    {company}
+                    {category}
                   </div>
                 ))}
               </div>
@@ -177,9 +175,7 @@ export default function Home() {
                 <div
                   key={feature.title}
                   className="group p-8 rounded-2xl bg-card border border-border hover:border-primary/50 transition-all duration-300 hover:shadow-2xl hover:shadow-primary/10 hover:-translate-y-1"
-                  style={{
-                    animationDelay: `${index * 100}ms`
-                  }}
+                  style={{ animationDelay: `${index * 100}ms` }}
                 >
                   <div className="space-y-4">
                     <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center group-hover:bg-primary/20 transition-colors group-hover:scale-110 duration-300">
@@ -207,7 +203,7 @@ export default function Home() {
                 Ready to transform your business?
               </h3>
               <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
-                Join hundreds of construction companies already using BuzinessIQ to streamline their operations
+                Join growing businesses across Ghana using BuzinessIQ to manage smarter and grow faster.
               </p>
               <div className="pt-4">
                 <Link href="/signup">
@@ -227,7 +223,7 @@ export default function Home() {
         <div className="max-w-7xl mx-auto px-6 py-8">
           <div className="flex flex-col md:flex-row items-center justify-between gap-4">
             <p className="text-sm text-muted-foreground">
-              © 2024 BuzinessIQ. All rights reserved.
+              © 2026 BuzinessIQ. All rights reserved.
             </p>
             <div className="flex items-center gap-6">
               <Link href="#" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
