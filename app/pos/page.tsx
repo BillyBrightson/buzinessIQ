@@ -75,11 +75,12 @@ export default function POSPage({ onSearchOpen }: { onSearchOpen?: () => void })
 
   // ── Cart helpers ──────────────────────────────────────────────────────────
   const addToCart = (product: Product) => {
-    if (product.stock <= 0) return
+    const avail = getBranchStock(product)
+    if (avail <= 0) return
     setCart((prev) => {
       const existing = prev.find((i) => i.productId === product.id)
       if (existing) {
-        if (existing.quantity >= product.stock) return prev
+        if (existing.quantity >= avail) return prev
         return prev.map((i) =>
           i.productId === product.id
             ? { ...i, quantity: i.quantity + 1, subtotal: (i.quantity + 1) * i.unitPrice }
@@ -103,7 +104,7 @@ export default function POSPage({ onSearchOpen }: { onSearchOpen?: () => void })
         if (i.productId !== productId) return [i]
         const newQty = i.quantity + delta
         if (newQty <= 0) return []
-        if (product && newQty > product.stock) return [i]
+        if (product && newQty > getBranchStock(product)) return [i]
         return [{ ...i, quantity: newQty, subtotal: newQty * i.unitPrice }]
       })
     )
@@ -158,6 +159,12 @@ export default function POSPage({ onSearchOpen }: { onSearchOpen?: () => void })
     setDiscount("0")
     setShowCheckout(false)
   }
+
+  // Get available stock for the current branch (falls back to total if no per-branch data)
+  const getBranchStock = (product: Product) =>
+    currentBranchId && product.branchStock
+      ? (product.branchStock[currentBranchId] ?? product.stock)
+      : product.stock
 
   const cartCount = cart.reduce((s, i) => s + i.quantity, 0)
 
@@ -227,8 +234,9 @@ export default function POSPage({ onSearchOpen }: { onSearchOpen?: () => void })
                 <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
                   {filtered.map((product) => {
                     const inCart = cart.find((i) => i.productId === product.id)
-                    const outOfStock = product.stock <= 0
-                    const lowStock = !outOfStock && product.stock <= product.lowStockThreshold
+                    const availStock = getBranchStock(product)
+                    const outOfStock = availStock <= 0
+                    const lowStock = !outOfStock && availStock <= product.lowStockThreshold
                     return (
                       <button
                         key={product.id}
@@ -249,7 +257,7 @@ export default function POSPage({ onSearchOpen }: { onSearchOpen?: () => void })
 
                         <div className="flex items-center justify-center gap-2 w-full">
                           <span className={`text-xs font-medium ${outOfStock ? "text-destructive" : lowStock ? "text-amber-500" : "text-muted-foreground"}`}>
-                            {outOfStock ? "Out of stock" : lowStock ? `Low: ${product.stock}` : `Stock: ${product.stock}`}
+                            {outOfStock ? "Out of stock" : lowStock ? `Low: ${availStock}` : `Stock: ${availStock}`}
                           </span>
                           {inCart && (
                             <span className="w-5 h-5 bg-primary text-primary-foreground rounded-full text-xs flex items-center justify-center font-bold shrink-0">

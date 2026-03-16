@@ -66,7 +66,13 @@ export default function StockTransferPage({ onSearchOpen }: { onSearchOpen?: () 
     setItems(prev => prev.filter(i => i.productId !== productId))
   }
 
-  const getProductStock = (productId: string) => products.find(p => p.id === productId)?.stock ?? 0
+  const getProductStock = (productId: string) => {
+    const p = products.find(p => p.id === productId)
+    if (!p) return 0
+    // Use source branch stock if available, else fall back to total
+    if (fromBranchId && p.branchStock) return p.branchStock[fromBranchId] ?? p.stock
+    return p.stock
+  }
 
   const canSubmit = fromBranchId && toBranchId && fromBranchId !== toBranchId && items.length > 0
     && items.every(i => i.quantity <= getProductStock(i.productId))
@@ -83,14 +89,15 @@ export default function StockTransferPage({ onSearchOpen }: { onSearchOpen?: () 
       toBranchName: toBranch?.name || "",
       items,
       status: "completed",
-      notes: notes || undefined,
+      notes: notes || null,
       transferredBy: user?.displayName || user?.email || "Admin",
       createdAt: new Date().toISOString(),
       completedAt: new Date().toISOString(),
     }
-    // Deduct stock from source (add to destination — products shared for now, just log the transfer)
+    // Deduct from source branch, add to destination branch
     items.forEach(item => {
-      storage.products.adjustStock(item.productId, -item.quantity, uid)
+      storage.products.adjustStock(item.productId, -item.quantity, uid, fromBranchId)
+      storage.products.adjustStock(item.productId, +item.quantity, uid, toBranchId)
     })
     storage.stockTransfers.add(transfer, uid)
     setTransfers(storage.stockTransfers.getAll(uid))

@@ -1,8 +1,9 @@
 "use client"
 
 import { useState, useRef, useEffect, useCallback } from "react"
-import { Sparkles, X, Send, Loader2, ChevronDown } from "lucide-react"
+import { Sparkles, Send, Loader2, ChevronDown } from "lucide-react"
 import { useAuth } from "@/components/auth-provider"
+import { storage } from "@/lib/storage"
 import { db } from "@/lib/firebase"
 import { collection, getDocs } from "firebase/firestore"
 import { FEATURE_PERMISSIONS } from "@/lib/rbac"
@@ -43,11 +44,13 @@ async function buildContext(effectiveUid: string, role: string) {
   const monthKey = today.slice(0, 7) // "YYYY-MM"
 
   if (canAccess("/employees")) {
-    const employees = await fetchCol<{ isActive: boolean }>("employees")
+    const employees = await fetchCol<{ fullName: string; role: string; hourlyRate: number; isActive: boolean }>("employees")
+    const active = employees.filter((e) => e.isActive)
     stats.employees = {
       total: employees.length,
-      active: employees.filter((e) => e.isActive).length,
+      active: active.length,
       inactive: employees.filter((e) => !e.isActive).length,
+      list: active.map((e) => ({ name: e.fullName, role: e.role, hourly_rate_GHS: e.hourlyRate })),
     }
   }
 
@@ -118,21 +121,43 @@ async function buildContext(effectiveUid: string, role: string) {
   }
 
   if (canAccess("/pos")) {
-    const [products, sales] = await Promise.all([
-      fetchCol<{ isActive: boolean; stock: number; lowStockThreshold: number }>("products"),
-      fetchCol<{ date: string; total: number }>("sales"),
+    const [rawProducts, rawSales] = await Promise.all([
+      fetchCol<{ id: string; name: string; category: string; price: number; cost: number; stock: number; unit: string; isActive: boolean; lowStockThreshold: number }>("products"),
+      fetchCol<{ date: string; total: number; paymentMethod: string; items: { productName: string; quantity: number; unitPrice: number }[]; receiptNumber: string; cashierName?: string }>("sales"),
     ])
-    const active = products.filter((p) => p.isActive)
-    const todaySales = sales.filter((s) => s.date === today)
-    stats.inventory = {
+    const active = rawProducts.filter((p) => p.isActive)
+    const todaySales = rawSales.filter((s) => s.date === today)
+    const thisMonthSales = rawSales.filter((s) => s.date?.startsWith(monthKey))
+
+    // Full product catalogue — AI can answer price/stock queries directly
+    stats.products = active.map((p) => ({
+      name: p.name,
+      category: p.category,
+      selling_price_GHS: p.price,
+      cost_price_GHS: p.cost,
+      stock: `${p.stock} ${p.unit}`,
+      low_stock: p.stock <= p.lowStockThreshold,
+      out_of_stock: p.stock === 0,
+    }))
+
+    stats.inventory_summary = {
       total_products: active.length,
-      low_stock: active.filter((p) => p.stock <= p.lowStockThreshold).length,
-      out_of_stock: active.filter((p) => p.stock === 0).length,
+      low_stock_count: active.filter((p) => p.stock <= p.lowStockThreshold).length,
+      out_of_stock_count: active.filter((p) => p.stock === 0).length,
     }
+
     stats.sales = {
       today_count: todaySales.length,
       today_revenue_GHS: todaySales.reduce((s, sale) => s + (sale.total || 0), 0).toFixed(2),
-      total_all_time: sales.length,
+      this_month_count: thisMonthSales.length,
+      this_month_revenue_GHS: thisMonthSales.reduce((s, sale) => s + (sale.total || 0), 0).toFixed(2),
+      total_all_time: rawSales.length,
+      recent_sales: todaySales.slice(-5).map((s) => ({
+        receipt: s.receiptNumber,
+        total_GHS: s.total,
+        method: s.paymentMethod,
+        items: s.items?.map((i) => `${i.productName} x${i.quantity} @ GHS${i.unitPrice}`).join(", "),
+      })),
     }
   }
 
@@ -181,19 +206,48 @@ function renderWithLinks(text: string) {
 // ─── Dynamic Island ─────────────────────────────────────────────────────────
 
 export function AISearchIsland() {
+  const THINKING_PHRASES = [
+    "Checking your books...",
+    "Scanning the floor...",
+    "Pulling today's numbers...",
+    "Reading the ledger...",
+    "Crunching the figures...",
+    "Checking inventory...",
+    "Reviewing the sales...",
+    "Looking through the records...",
+  ]
+
   const { user, effectiveUid, userRole } = useAuth()
   const [isOpen, setIsOpen] = useState(false)
   const [input, setInput] = useState("")
   const [messages, setMessages] = useState<Message[]>([])
   const [isLoading, setIsLoading] = useState(false)
+  const [thinkingPhrase, setThinkingPhrase] = useState(THINKING_PHRASES[0])
+  const [hotkey, setHotkey] = useState("k")
   const inputRef = useRef<HTMLInputElement>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const abortRef = useRef<AbortController | null>(null)
 
-  // ⌘K / Ctrl+K to open
+  useEffect(() => {
+    if (!isLoading) return
+    setThinkingPhrase(THINKING_PHRASES[Math.floor(Math.random() * THINKING_PHRASES.length)])
+    const interval = setInterval(() => {
+      setThinkingPhrase(THINKING_PHRASES[Math.floor(Math.random() * THINKING_PHRASES.length)])
+    }, 1800)
+    return () => clearInterval(interval)
+  }, [isLoading])
+
+  useEffect(() => {
+    setHotkey(storage.aiHotkey.get())
+    const onStorage = () => setHotkey(storage.aiHotkey.get())
+    window.addEventListener("storage", onStorage)
+    return () => window.removeEventListener("storage", onStorage)
+  }, [])
+
+  // ⌘+[hotkey] to open
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
-      if ((e.metaKey || e.ctrlKey) && e.key === "k") {
+      if ((e.metaKey || e.ctrlKey) && e.key === hotkey) {
         e.preventDefault()
         setIsOpen((v) => !v)
       }
@@ -201,7 +255,7 @@ export function AISearchIsland() {
     }
     window.addEventListener("keydown", handler)
     return () => window.removeEventListener("keydown", handler)
-  }, [])
+  }, [hotkey])
 
   useEffect(() => {
     if (isOpen) setTimeout(() => inputRef.current?.focus(), 100)
@@ -371,9 +425,9 @@ export function AISearchIsland() {
                             )}
                           </>
                         ) : (
-                          <div className="flex items-center gap-2 text-white/30">
-                            <Loader2 size={12} className="animate-spin" />
-                            <span className="text-xs">Thinking...</span>
+                          <div className="flex items-center gap-2 text-white/40">
+                            <Loader2 size={12} className="animate-spin text-violet-400" />
+                            <span className="text-xs italic">{thinkingPhrase}</span>
                           </div>
                         )}
                       </div>
@@ -433,7 +487,7 @@ export function AISearchIsland() {
         </span>
         {!isOpen && (
           <kbd className="hidden sm:inline-flex items-center px-1.5 py-0.5 rounded-md text-[10px] font-mono border border-white/10 text-white/30 bg-white/5">
-            ⌘K
+            ⌘{hotkey.toUpperCase()}
           </kbd>
         )}
         {isOpen && (

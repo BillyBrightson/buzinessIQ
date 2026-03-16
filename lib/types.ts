@@ -81,7 +81,8 @@ export interface Product {
   category: string
   price: number
   cost: number
-  stock: number
+  stock: number               // total stock across all branches
+  branchStock?: Record<string, number>  // per-branch stock breakdown
   unit: string
   barcode: string
   lowStockThreshold: number

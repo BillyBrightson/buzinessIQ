@@ -40,7 +40,7 @@ const emptyForm = (): ProductFormData => ({
 })
 
 export default function ProductsPage({ onSearchOpen }: { onSearchOpen?: () => void }) {
-  const { user } = useAuth()
+  const { user, currentBranchId } = useAuth()
   const [products, setProducts] = useState<Product[]>([])
   const [search, setSearch] = useState("")
   const [categoryFilter, setCategoryFilter] = useState("all")
@@ -112,13 +112,18 @@ export default function ProductsPage({ onSearchOpen }: { onSearchOpen?: () => vo
     if (!form.category.trim()) { setFormError("Category is required"); return }
     if (!form.price || parseFloat(form.price) <= 0) { setFormError("Selling price must be greater than 0"); return }
 
+    const initialStock = parseInt(form.stock) || 0
     const product: Product = {
       id: editingProduct?.id || crypto.randomUUID(),
       name: form.name.trim(),
       category: form.category.trim(),
       price: parseFloat(form.price),
       cost: parseFloat(form.cost) || 0,
-      stock: parseInt(form.stock) || 0,
+      stock: initialStock,
+      // Initialize per-branch stock for the current branch
+      branchStock: currentBranchId
+        ? { ...(editingProduct?.branchStock ?? {}), [currentBranchId]: editingProduct ? (editingProduct.branchStock?.[currentBranchId] ?? editingProduct.stock) : initialStock }
+        : editingProduct?.branchStock,
       lowStockThreshold: parseInt(form.lowStockThreshold) || 5,
       unit: form.unit,
       barcode: form.barcode.trim(),
@@ -144,7 +149,7 @@ export default function ProductsPage({ onSearchOpen }: { onSearchOpen?: () => vo
   const handleStockAdjust = (delta: number) => {
     if (!user || !showStockModal) return
     const adjusted = (parseInt(stockAdjust) || 0) * delta
-    storage.products.adjustStock(showStockModal.id, adjusted, user.uid)
+    storage.products.adjustStock(showStockModal.id, adjusted, user.uid, currentBranchId || undefined)
     load()
     setShowStockModal(null)
     setStockAdjust("")

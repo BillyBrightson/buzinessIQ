@@ -703,11 +703,18 @@ export const storage = {
         if (userId) fsSet(userId, "products", all[index].id, all[index])
       }
     },
-    adjustStock: (id: string, delta: number, userId?: string) => {
+    adjustStock: (id: string, delta: number, userId?: string, branchId?: string) => {
       const all = storage.products.getAll(userId)
       const index = all.findIndex((p) => p.id === id)
       if (index >= 0) {
+        // Always update total stock
         all[index].stock = Math.max(0, all[index].stock + delta)
+        // Update per-branch stock if branchId provided
+        if (branchId) {
+          if (!all[index].branchStock) all[index].branchStock = {}
+          const current = all[index].branchStock![branchId] ?? all[index].stock
+          all[index].branchStock![branchId] = Math.max(0, current + delta)
+        }
         const keys = getKeys(userId)
         localStorage.setItem(keys.products, JSON.stringify(all))
         if (userId) fsSet(userId, "products", all[index].id, all[index])
@@ -729,9 +736,9 @@ export const storage = {
       const keys = getKeys(userId)
       localStorage.setItem(keys.sales, JSON.stringify(all))
       if (userId) fsSet(userId, "sales", sale.id, sale)
-      // Deduct stock for each item sold
+      // Deduct stock for each item sold (per-branch if branchId is set)
       sale.items.forEach((item) => {
-        storage.products.adjustStock(item.productId, -item.quantity, userId)
+        storage.products.adjustStock(item.productId, -item.quantity, userId, sale.branchId)
       })
     },
   },
@@ -947,6 +954,17 @@ export const storage = {
           console.warn("[Firestore] PermissionOverrides write failed:", err)
         )
       }
+    },
+  },
+
+  // AI hotkey — device-level (not per-user cloud data). Stores just the letter, e.g. "k"
+  aiHotkey: {
+    get: (): string => {
+      if (typeof window === "undefined") return "k"
+      return localStorage.getItem("crm_aiHotkey") ?? "k"
+    },
+    set: (key: string) => {
+      localStorage.setItem("crm_aiHotkey", key)
     },
   },
 
