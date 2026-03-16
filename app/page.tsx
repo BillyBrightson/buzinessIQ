@@ -12,32 +12,38 @@ export default function Home() {
     {
       icon: Users,
       title: "Employee Management",
-      description: "Streamline your workforce with comprehensive employee tracking, attendance, and payroll management"
+      description: "Streamline your workforce with comprehensive employee tracking, attendance, and payroll management",
+      image: "/1.Employee Management.png",
     },
     {
       icon: BarChart3,
       title: "Real-time Analytics",
-      description: "Make data-driven decisions with powerful insights and reporting tools across your entire business"
+      description: "Make data-driven decisions with powerful insights and reporting tools across your entire business",
+      image: "/2.Financial Analysis.png",
     },
     {
       icon: TrendingUp,
       title: "Finance & Invoicing",
-      description: "Track payments, manage invoices, and stay on top of your cash flow with ease"
+      description: "Track payments, manage invoices, and stay on top of your cash flow with ease",
+      image: null,
     },
     {
       icon: ShoppingCart,
       title: "Point of Sale",
-      description: "Sell faster with a built-in POS terminal, real-time inventory, stock transfers between branches, and instant thermal receipts"
+      description: "Sell faster with a built-in POS terminal, real-time inventory, stock transfers between branches, and instant thermal receipts",
+      image: "/3.POS.png",
     },
     {
       icon: Zap,
       title: "Multi-Branch Ready",
-      description: "Manage multiple shop locations, transfer stock between branches, and track performance per branch"
+      description: "Manage multiple shop locations, transfer stock between branches, and track performance per branch",
+      image: "/4.Project Tracking.png",
     },
     {
       icon: Shield,
       title: "Secure & Reliable",
-      description: "Enterprise-grade security with cloud sync and local data storage for complete control"
+      description: "Enterprise-grade security with cloud sync and local data storage for complete control",
+      image: "/5.Secre and Reliable.png",
     },
   ]
 
@@ -174,20 +180,38 @@ export default function Home() {
               return (
                 <div
                   key={feature.title}
-                  className="group p-8 rounded-2xl bg-card border border-border hover:border-primary/50 transition-all duration-300 hover:shadow-2xl hover:shadow-primary/10 hover:-translate-y-1"
+                  className="group relative overflow-hidden rounded-2xl border border-white/10 bg-white/[0.04] backdrop-blur-xl hover:border-primary/40 transition-all duration-500 hover:shadow-2xl hover:shadow-primary/15 hover:-translate-y-1.5"
                   style={{ animationDelay: `${index * 100}ms` }}
                 >
-                  <div className="space-y-4">
-                    <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center group-hover:bg-primary/20 transition-colors group-hover:scale-110 duration-300">
+                  {/* Background screenshot */}
+                  {feature.image && (
+                    <>
+                      <div
+                        className="absolute inset-0 bg-cover bg-center bg-no-repeat opacity-[0.13] group-hover:opacity-[0.22] transition-opacity duration-500 scale-[1.08] group-hover:scale-100"
+                        style={{ backgroundImage: `url('${feature.image}')`, transitionProperty: "opacity, transform" }}
+                      />
+                      {/* Gradient wash — keeps text readable */}
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-black/10" />
+                      {/* Frosted glass sheen */}
+                      <div className="absolute inset-0 bg-gradient-to-br from-white/[0.06] via-transparent to-primary/[0.04]" />
+                    </>
+                  )}
+
+                  {/* Card content */}
+                  <div className="relative z-10 p-8 space-y-4">
+                    <div className="w-12 h-12 rounded-xl bg-primary/20 backdrop-blur-sm border border-primary/20 flex items-center justify-center group-hover:bg-primary/30 transition-all duration-300 group-hover:scale-110 shadow-lg shadow-primary/10">
                       <Icon className="h-6 w-6 text-primary" />
                     </div>
-                    <h3 className="text-xl font-semibold text-foreground">
+                    <h3 className="text-xl font-semibold text-white/90 group-hover:text-white transition-colors">
                       {feature.title}
                     </h3>
-                    <p className="text-muted-foreground leading-relaxed">
+                    <p className="text-white/50 group-hover:text-white/65 leading-relaxed transition-colors">
                       {feature.description}
                     </p>
                   </div>
+
+                  {/* Subtle inner border highlight (top edge) */}
+                  <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/20 to-transparent" />
                 </div>
               )
             })}
