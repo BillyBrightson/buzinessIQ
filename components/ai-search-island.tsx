@@ -8,6 +8,7 @@ import { db } from "@/lib/firebase"
 import { collection, getDocs } from "firebase/firestore"
 import { FEATURE_PERMISSIONS } from "@/lib/rbac"
 import Link from "next/link"
+import { usePathname } from "next/navigation"
 
 interface Message {
   role: "user" | "assistant"
@@ -218,6 +219,8 @@ export function AISearchIsland() {
   ]
 
   const { user, effectiveUid, userRole } = useAuth()
+  const pathname = usePathname()
+  const isHomepage = pathname === "/"
   const [isOpen, setIsOpen] = useState(false)
   const [input, setInput] = useState("")
   const [messages, setMessages] = useState<Message[]>([])
@@ -266,7 +269,9 @@ export function AISearchIsland() {
   }, [messages])
 
   const sendMessage = useCallback(async () => {
-    if (!input.trim() || isLoading || !user) return
+    if (!input.trim() || isLoading) return
+    // On homepage, allow general questions without login; inside app, require login
+    if (!isHomepage && !user) return
 
     const userMsg = input.trim()
     setInput("")
@@ -279,7 +284,14 @@ export function AISearchIsland() {
     abortRef.current = new AbortController()
 
     try {
-      const context = await buildContext(effectiveUid || user.uid, userRole)
+      // Homepage (or logged-out): send general mode with no company data
+      // App pages (logged in): send full RBAC-filtered context
+      const context = (isHomepage || !user)
+        ? {
+            mode: "general",
+            today: new Date().toLocaleDateString("en-GH", { weekday: "long", year: "numeric", month: "long", day: "numeric" }),
+          }
+        : await buildContext(effectiveUid || user.uid, userRole)
 
       const res = await fetch("/api/ai-search", {
         method: "POST",
@@ -337,7 +349,7 @@ export function AISearchIsland() {
     } finally {
       setIsLoading(false)
     }
-  }, [input, isLoading, user, effectiveUid, userRole])
+  }, [input, isLoading, user, effectiveUid, userRole, isHomepage])
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === "Enter" && !e.shiftKey) {
@@ -346,16 +358,23 @@ export function AISearchIsland() {
     }
   }
 
-  // Suggestions for empty state
-  const suggestions = [
-    "How many employees are active?",
-    "Show me this month's expenses",
-    "Which invoices are overdue?",
-    "How many sales today?",
-  ]
+  // Suggestions change based on context
+  const suggestions = isHomepage
+    ? [
+        "How do I manage employee payroll?",
+        "What is BuzinessIQ?",
+        "How does multi-branch POS work?",
+        "Can I track invoices here?",
+      ]
+    : [
+        "How many employees are active?",
+        "Show me this month's expenses",
+        "Which invoices are overdue?",
+        "How many sales today?",
+      ]
 
   return (
-    <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 flex flex-col items-center pointer-events-none">
+    <div className={`fixed bottom-6 z-50 flex flex-col pointer-events-none ${isHomepage ? "right-6 items-end" : "left-1/2 -translate-x-1/2 items-center"}`}>
       {/* Chat panel — appears above the island when open */}
       <div
         className={`transition-all duration-300 ease-in-out w-[420px] max-w-[calc(100vw-2rem)] mb-3 ${

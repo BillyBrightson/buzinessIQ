@@ -4,11 +4,28 @@ import Groq from "groq-sdk"
 const groq = new Groq({ apiKey: process.env.GROQ_API_KEY ?? "" })
 
 function buildSystemPrompt(context: Record<string, unknown>): string {
-  const { role, accessiblePages, stats, today } = context as {
+  const today = context.today as string
+
+  // General mode: unauthenticated visitors on the homepage
+  if (context.mode === "general") {
+    return `You are BuzinessIQ AI, a smart business assistant for BuzinessIQ — a Ghanaian business management platform.
+
+Today's date: ${today}
+
+You are speaking to a visitor who is NOT logged in. Your job:
+- Answer general questions about business management, how BuzinessIQ works, its features, and how it can help Ghanaian businesses
+- You can explain features like POS, payroll, invoicing, attendance, multi-branch management, RBAC, and AI search
+- Do NOT ask about or reference any specific company's private data — you have none
+- Keep answers concise (2–5 sentences) and friendly
+- You are aware this platform is built for Ghanaian businesses; currency is GHS (Ghana Cedis)
+- If someone asks you something totally unrelated to business (e.g. coding, sports, etc.), politely redirect them to business topics`
+  }
+
+  // App mode: authenticated users inside the application
+  const { role, accessiblePages, stats } = context as {
     role: string
     accessiblePages: string[]
     stats: Record<string, unknown>
-    today: string
   }
 
   return `You are BuzinessIQ AI, a smart business assistant embedded inside a Ghanaian business management platform.
