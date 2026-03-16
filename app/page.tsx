@@ -194,8 +194,8 @@ export default function Home() {
                     <div className="absolute inset-0 bg-gradient-to-br from-primary/10 via-emerald-500/5 to-primary/5 opacity-60 group-hover:opacity-100 transition-opacity duration-500" />
                   )}
 
-                  {/* Frosted glass scrim — fades image edges, keeps text clear */}
-                  <div className="absolute inset-0 bg-gradient-to-t from-white/95 dark:from-black/85 via-white/50 dark:via-black/30 to-white/10 dark:to-transparent" />
+                  {/* Frosted glass scrim — transparent at top (image shows), fades to ~80% at bottom (text readable) */}
+                  <div className="absolute inset-0 bg-gradient-to-b from-transparent via-white/20 dark:via-black/10 to-white/80 dark:to-black/75" />
 
                   {/* Subtle colour tint from primary */}
                   <div className="absolute inset-0 bg-gradient-to-br from-primary/[0.04] via-transparent to-transparent" />
