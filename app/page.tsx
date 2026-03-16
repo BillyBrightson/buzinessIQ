@@ -25,7 +25,7 @@ export default function Home() {
       icon: TrendingUp,
       title: "Finance & Invoicing",
       description: "Track payments, manage invoices, and stay on top of your cash flow with ease",
-      image: null,
+      image: "/Invoicing.png",
     },
     {
       icon: ShoppingCart,
